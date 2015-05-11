@@ -380,30 +380,29 @@ def execute(args):
         gdal.GDT_Float32, d_up_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, vectorize_op=False)
 
-    LOGGER.info('calculate WS factor')
-    ws_factor_inverse_uri = os.path.join(
-        intermediate_dir, 'ws_factor_inverse%s.tif' % file_suffix)
-    ws_nodata = -1.0
+    LOGGER.info('calculate inverse S factor')
+    s_factor_inverse_uri = os.path.join(
+        intermediate_dir, 's_factor_inverse%s.tif' % file_suffix)
+    s_nodata = -1.0
     slope_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         thresholded_slope_uri)
 
-    def ws_op(w_factor, s_factor):
-        """calcualtes the inverse of the ws factor so we can multiply it like
+    def s_inverse_op(s_factor):
+        """calcualtes the inverse of the s factor so we can multiply it like
             a factor"""
         return numpy.where(
-            (w_factor != w_nodata) & (s_factor != slope_nodata),
-            1.0 / (w_factor * s_factor), ws_nodata)
+            s_factor != slope_nodata, 1.0 / s_factor, s_nodata)
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [thresholded_w_factor_uri, thresholded_slope_uri], ws_op,
-        ws_factor_inverse_uri, gdal.GDT_Float32, ws_nodata, out_pixel_size,
-        "intersection", dataset_to_align_index=0, vectorize_op=False)
+        [thresholded_slope_uri], s_inverse_op, s_factor_inverse_uri,
+        gdal.GDT_Float32, s_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info('calculating d_dn')
     d_dn_uri = os.path.join(intermediate_dir, 'd_dn%s.tif' % file_suffix)
     pygeoprocessing.routing.distance_to_stream(
         flow_direction_uri, stream_uri, d_dn_uri,
-        factor_uri=ws_factor_inverse_uri)
+        factor_uri=s_factor_inverse_uri)
 
     LOGGER.info('calculating downstream distance')
     downstream_distance_uri = os.path.join(
@@ -440,7 +439,6 @@ def execute(args):
     l_lulc_temp_uri = pygeoprocessing.geoprocessing.temporary_filename()
 
     for nutrient in nutrients_to_process:
-
         effective_retention_uri = os.path.join(
             intermediate_dir, 'effective_retention_%s%s.tif' %
             (nutrient, file_suffix))
