@@ -510,10 +510,10 @@ def execute(args):
 
     # Initializations
     # This is the finest useful scale at which the model can extract bathy data
-    args['cell_size'] = \
+    args['bathy_cell_size'] = \
         pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['bathymetry_uri'])
     # Look for mis-aligned shore up to 10 pixels inland
-    args['max_land_profile_len'] = int(10 * args['cell_size'])
+    args['max_land_profile_len'] = int(10 * args['bathy_cell_size'])
     args['max_land_profile_height'] = 20 # Maximum inland elevation
 
 
@@ -735,7 +735,7 @@ def execute(args):
         LOGGER.debug('Pre-processing the AOI...')
         args['aoi_raster_uri'] = \
             preprocess_polygon_datasource(args['aoi_uri'], args['aoi_uri'], \
-            args['cell_size'], args['aoi_raster_uri'])
+            args['bathy_cell_size'], args['aoi_raster_uri'])
 
     # Preprocess the landmass
     args['landmass_raster_uri'] = \
@@ -743,7 +743,7 @@ def execute(args):
     if not os.path.isfile(args['landmass_raster_uri']):
         LOGGER.debug('Pre-processing landmass...')
         preprocess_polygon_datasource(args['landmass_uri'], \
-            args['aoi_uri'], args['cell_size'], \
+            args['aoi_uri'], args['bathy_cell_size'], \
             os.path.join(args['intermediate_dir'], 'landmass.tif'))
 
     # Preprocess bathymetry
@@ -753,7 +753,7 @@ def execute(args):
         LOGGER.debug('Pre-processing bathymetry...')
         bathy_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(args['bathymetry_uri'])
         preprocess_dataset(args['bathymetry_uri'], \
-            args['aoi_uri'], args['cell_size'], args['bathymetry_raster_uri'])
+            args['aoi_uri'], args['bathy_cell_size'], args['bathymetry_raster_uri'])
 
 
 
@@ -780,8 +780,11 @@ def execute(args):
 
     # Save the dictionary
     field_index_dictionary_uri = \
-        os.path.join(args['intermediate_dir'], 'field_indices')
-    json.dump(args['field_index'], open(field_index_dictionary_uri, 'w'))
+        os.path.join(args['output_dir'], 'habitat_field_indices.json')
+    
+    with open(field_index_dictionary_uri, 'w') \
+        as habitat_index_codes:
+        json.dump(args['field_index'], habitat_index_codes, 'w')
 
 
     # Compute habitat field count
@@ -911,7 +914,7 @@ def execute(args):
                                 LOGGER.debug('rasterizing field %s to %s', \
                                     field_name, output_uri)
                                 preprocess_polygon_datasource(file_uri, \
-                                    args['aoi_uri'], args['cell_size'], \
+                                    args['aoi_uri'], args['bathy_cell_size'], \
                                     output_uri, field_name = field_name, \
                                     all_touched = True, nodata = -99999.0)
                             

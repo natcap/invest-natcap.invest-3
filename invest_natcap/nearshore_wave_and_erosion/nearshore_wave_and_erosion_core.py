@@ -376,7 +376,7 @@ def compute_transects(args):
     LOGGER.debug('Computing transects...')
 
     # transect resampling resolution
-    input_raster_resolution = args['cell_size']
+    input_raster_resolution = args['bathy_cell_size']
 
     # Store shore and transect information
     shore_nodata = -20000.0
@@ -621,19 +621,19 @@ def compute_transects(args):
                         interpolated_depths_tiff = \
                             clipped_transect if clipped_transect.size > 5 else None
                         
-                        hdf5_cell_size = min(args['cell_size'], 1)
+                        hdf5_cell_size = min(args['bathy_cell_size'], 1)
 
                         interpolated_depths_hdf5 = \
                             interpolate_transect(clipped_transect, \
-                                args['cell_size'], \
+                                args['bathy_cell_size'], \
                                 hdf5_cell_size)
 
                         positions_hdf5 = ( \
                             interpolate_transect(positions_tiff[0], \
-                                args['cell_size'], \
+                                args['bathy_cell_size'], \
                                 hdf5_cell_size), \
                             interpolate_transect(positions_tiff[1], \
-                                args['cell_size'], \
+                                args['bathy_cell_size'], \
                                 hdf5_cell_size))
 
 
@@ -655,7 +655,7 @@ def compute_transects(args):
 
 
                         stretch_coeff = \
-                            args['cell_size'] / hdf5_cell_size
+                            args['bathy_cell_size'] / hdf5_cell_size
                         
 
                         start_hdf5 = int(start * stretch_coeff)
@@ -1011,6 +1011,7 @@ def compute_transects(args):
 
     # Saving transects
     habitat_type_dataset_tiff = transect_data_file_tiff['habitat_type']
+    LOGGER.debug('Writing data to raster %s' % habitat_type_dataset_tiff)
     progress_step = max(tiles / 39, 1)
     for transect in range(tiles):
         if transect % progress_step == 0:
@@ -2505,7 +2506,7 @@ def combine_natural_habitats(args, transect_data_file, max_transect_length):
         Inputs: -args['habitat_nodata']:
                 -args['tiles']:
                 -args['i_transect_spacing']:
-                -args['cell_size']:
+                -args['bathy_cell_size']:
                 -args['i_input_cell_size']:
                 -args['habitat_field_count']:
                 -args['shapefiles']:
@@ -2531,7 +2532,7 @@ def combine_natural_habitats(args, transect_data_file, max_transect_length):
 
     # Add size and model resolution to the attributes
     habitat_type_dataset.attrs.create('transect_spacing', args['i_transect_spacing'])
-    habitat_type_dataset.attrs.create('model_resolution', args['cell_size'])
+    habitat_type_dataset.attrs.create('model_resolution', args['bathy_cell_size'])
     habitat_type_dataset.attrs.create('bathymetry_resolution', args['i_input_cell_size'])
     
 
@@ -2747,10 +2748,13 @@ def combine_natural_habitats(args, transect_data_file, max_transect_length):
             band = None
             raster = None
 
-    # Save the habitat index codes that we just used
-    with open(os.path.join(args['output_dir'], 'habitat_index_codes.json'), 'w') \
-        as habitat_index_codes:
-        json.dump(habitat_name_map, habitat_index_codes)
+#    # Save the habitat index codes that we just used
+#    field_index_dictionary_uri = \
+#        os.path.join(args['output_dir'], 'habitat_field_indices.json')
+#    
+#    with open(field_index_dictionary_uri, 'w') \
+#        as habitat_index_codes:
+#        json.dump(args['field_index'], habitat_index_codes, 'w')
 
 
 def apply_habitat_constraints(mask, habitat_type, args):
