@@ -17,12 +17,12 @@ input_dir = os.path.join(
 pp = pprint.PrettyPrinter(indent=4)
 
 
-# class TestOverallModel1(unittest.TestCase):
-#     def setUp(self):
-#         self.args = test_data.get_large_dataset_args()
+class TestOverallModel1(unittest.TestCase):
+    def setUp(self):
+        self.args = test_data.get_args()
 
-#     def test_run(self):
-#         guess = crop_production.execute(self.args)
+    def test_run(self):
+        guess = crop_production.execute(self.args)
 
 
 if __name__ == '__main__':
