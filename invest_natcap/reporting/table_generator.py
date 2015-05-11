@@ -2,7 +2,7 @@
 import logging
 from types import StringType
 
-LOGGER = logging.getLogger('invest_natcap.table_generator')
+LOGGER = logging.getLogger('invest_natcap.reporting.table_generator')
 
 def generate_table(table_dict, attributes=None):
     """Takes in a dictionary representation of a table and generates a String of

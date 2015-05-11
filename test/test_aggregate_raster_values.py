@@ -1,4 +1,4 @@
-from invest_natcap import raster_utils
+from pygeoprocessing import geoprocessing as raster_utils
 
 shapefile_uri = 'test/invest-data/Base_Data/Freshwater/subwatersheds.shp'
 raster_uri = 'test/invest-data/Base_Data/Freshwater/landuse_90' 

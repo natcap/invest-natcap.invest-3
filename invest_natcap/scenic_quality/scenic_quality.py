@@ -18,7 +18,7 @@ from invest_natcap.scenic_quality import scenic_quality_core
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('scenic_quality')
+LOGGER = logging.getLogger('invest_natcap.scenic_quality.scenic_quality')
 
 def old_reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
     """A URI wrapper for reproject dataset that opens the original_dataset_uri

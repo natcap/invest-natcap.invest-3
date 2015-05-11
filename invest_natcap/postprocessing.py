@@ -7,15 +7,15 @@ import numpy as np
 import pylab
 from osgeo import gdal
 
-LOGGER = logging.getLogger('postprocessing')
+LOGGER = logging.getLogger('invest_natcap.postprocessing')
 
 def plot_flow_direction(flow_dataset_uri, output_uri):
     """Generates a quiver plot (arrows on a grid) of a flow matrix
-    
+
     flow_dataset_uri - a uri to a GDAL compatable raster whose values are
         radians indicating the direction of outward flow.
     output_uri - the location to disk to save the resulting plot png file
-        
+
     returns nothing"""
 
     LOGGER.info('Loading %s' % flow_dataset_uri)

@@ -31,25 +31,13 @@
         },
         {
           "id": "results_suffix",
-          "args_id": "suffix",
+          "args_id": "results_suffix",
           "type": "text",
           "dataType": "string",
           "label": "Results Suffix (Optional)",
           "defaultValue": "",
           "required": false,
-          "helpText": "This text will be appended to the end of the output files to help separate outputs from multiple runs."
-        },
-        {
-          "id": "lulc_map_uri",
-          "args_id": "lulc_map_uri",
-          "type": "file",
-          "label": "Land Use Map (Raster)",
-          "defaultValue": "../CropProduction/input/lulc_map.tif",
-          "required": true,
-          "validateAs": {
-            "type": "GDAL"
-          },
-          "helpText": ""
+          "helpText": "This text will be appended to the end of the yield function output folders to help seperate outputs from multiple runs."
         },
         {
           "id": "crop_lookup_table_uri",
@@ -61,7 +49,19 @@
           "validateAs": {
             "type": "CSV"
           },
-          "helpText": ""
+          "helpText": "The provided CSV table is used to convert the crop code provided in the Crop Map to the crop name that can be used for searching through inputs and formatting outputs.<br><br>The table should contain two columns: a 'crop' column and a 'code' column.  The 'crop' column contains the names of each crop used in the model, and the 'code' column contains the associated code used to represent that crop in the Crop Map."
+        },
+        {
+          "id": "lulc_map_uri",
+          "args_id": "lulc_map_uri",
+          "type": "file",
+          "label": "Land Use Map (Raster)",
+          "defaultValue": "../CropProduction/input/lulc_raster.tif",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "A GDAL-supported raster representing a crop management scenario.<br><br>Each cell value in the raster should correspond to a valid crop that can be found in the Crop Lookup Table CSV file inputted below."
         },
         {
           "id": "spatial_dataset_dir",
@@ -72,52 +72,56 @@
           "validateAs": {
             "type": "folder"
           },
-          "helpText": ""
+          "helpText": "The provided folder should contain a set of folders and data specified in the 'Running the Model' section of the model's User Guide."
         },
         {
-          "id": "generate_crop_production_maps",
-          "args_id": "generate_crop_production_maps",
+          "id": "create_crop_production_maps",
+          "args_id": "create_crop_production_maps",
           "type": "checkbox",
-          "label": "Generate Crop Production Maps",
+          "label": "Create Crop Production Maps",
           "required": true,
           "defaultValue": false,
-          "helpText": ""
+          "helpText": "If checked, a set of crop production maps is saved within the folder of each yield function."
         }
       ]
     },
     {
-      "id": "do_yield_observed",
-      "label": "Calculate Yield based on Observed Yields within Region",
+      "id": "do_fertilizer_maps",
+      "args_id": "do_fertilizer_maps",
+      "label": "Use Fertilizer Maps",
       "type": "container",
-      "defaultValue": false,
+      "defaultValue": true,
       "collapsible": true,
       "elements": [
         {
-          "id": "yield_observed_list",
+          "id": "fertilizer_list",
           "type": "list",
           "elements": [
-            {
-              "id": "yield_observed_label",
-              "type": "label",
-              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: a set of GDAL-supported rasters within a folder named 'yield_observed' representing the observed crop yield for each crop.  [Additional requirements here]"
-            }
+          {
+            "id": "fertilizer_maps_dir",
+            "args_id": "fertilizer_maps_dir",
+            "type": "folder",
+            "label": "Fertilizer Application Rate Maps Folder",
+            "defaultValue": "../CropProduction/input/fertilizer_maps/",
+            "required": false,
+            "helpText": "A set of GDAL-supported rasters representing the amount of Nitrogen (N), Phosphorous (P2O5), and Potash (K2O) applied to each area of land in kilograms per hectare.<br><br>These maps are required when running the regression model yield function and are an optional input for all yield functions when calculating economic returns.<br><br>Each cell value in the raster should be a non-negative float value representing the amount of fertilizer applied in units of kilograms per hectare (kg/hectare).  Each file should be prepended with the name of the fertilizer (nitrogen, phosphorous, potash) in lowercase, followed by an underscore to help the program search for the matching file. The Fertilizer Maps must have the same dimensions and projection as the provided Land Use Map."
+          }
           ]
         }
       ]
     },
     {
-      "id": "do_yield_percentile",
-      "label": "Calculate Yield based on Climate-specific Distribution of Observed Yields",
+      "id": "yield_functions",
+      "label": "Calculate Yield and Production",
       "type": "container",
-      "defaultValue": false,
-      "collapsible": true,
+      "defaultValue": true,
+      "collapsible": false,
       "elements": [
         {
           "id": "yield_percentile_list",
           "type": "list",
           "elements": [
             {
-<<<<<<< local
               "id": "yield_percentile_label",
               "type": "label",
               "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...).  A table named 'yield_climate_percentile_table.csv' within a folder named 'yield_climate_percentile'.  [Additional requirements here]"
@@ -145,35 +149,6 @@
             {
               "id": "modeled_fertilizer_maps_dir",
               "args_id": "modeled_fertilizer_maps_dir",
-=======
-              "id": "yield_percentile_label",
-              "type": "label",
-              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...).  A table named 'yield_climate_percentile_table.csv' within a folder named 'yield_climate_percentile'.  [Additional requirements here]"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "do_yield_regression_model",
-      "label": "Calculate Yield based on Yield Regression Model with Climate-specific Parameters",
-      "type": "container",
-      "defaultValue": false,
-      "collapsible": true,
-      "elements": [
-        {
-          "id": "yield_modeled_list",
-          "type": "list",
-          "elements": [
-            {
-              "id": "yield_observed_label",
-              "type": "label",
-              "label": "Requires the following to be provided in the 'Crop Production Model Spatial Dataset' input folder: A set of GDAL-supported rasters within a folder named 'climate_bin' (raster cell values represent a particular bin...). A table named 'yield_climate_regression_table.csv' within a folder named 'yield_climate_regression'.  [Additional requirements here]"
-            },
-            {
-              "id": "modeled_fertilizer_maps_dir",
-              "args_id": "modeled_fertilizer_maps_dir",
->>>>>>> other
               "type": "folder",
               "label": "Fertilizer Application Rate Maps Folder",
               "defaultValue": "../CropProduction/input/modeled_fertilizer_maps/",
@@ -198,7 +173,8 @@
     },
     {
       "id": "do_nutrition",
-      "label": "Calculate Nutrition Contents from Yield",
+      "args_id": "do_nutrition",
+      "label": "Calculate Nutritional Contents from Production",
       "type": "container",
       "defaultValue": false,
       "collapsible": true,
@@ -211,13 +187,13 @@
               "id": "nutrition_table_uri",
               "args_id": "nutrition_table_uri",
               "type": "file",
-              "label": "Nutrition Contents Table (CSV)",
-              "defaultValue": "../CropProduction/input/nutrition_table.csv",
+              "label": "Nutritional Contents Table (CSV)",
+              "defaultValue": "../CropProduction/input/nutrient_contents_table.csv",
               "required": true,
               "validateAs": {
                 "type": "CSV"
               },
-              "helpText": ""
+              "helpText": "A CSV table containing information about the nutritional contents of each crop.<br><br>Please consult the User Guide to learn more about how the table should be formatted."
             }
           ]
         }
@@ -225,7 +201,8 @@
     },
     {
       "id": "do_economic_returns",
-      "label": "Calculate Economic Returns from Yield",
+      "args_id": "do_economic_returns",
+      "label": "Calculate Economic Returns",
       "type": "container",
       "defaultValue": false,
       "collapsible": true,
@@ -244,7 +221,7 @@
               "validateAs": {
                 "type": "CSV"
               },
-              "helpText": ""
+              "helpText": "A CSV table containing information related to the earnings a producer receives for selling a given crop and the expenses involved with producing that crop.<br><br>Please consult the User Guide to learn more about how the table should be formatted."
             }
           ]
         }

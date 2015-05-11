@@ -11,7 +11,7 @@ import logging
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('aesthetic_quality')
+LOGGER = logging.getLogger('invest_natcap.scenic_quality.viewshed_grass')
 
 class grasswrapper():
     def __init__(self,
@@ -38,7 +38,7 @@ def execute(args):
     os.putenv('GIS_LOCK', 'default')
 
     project_setup(args["in_raster"])
-    
+
     #preprocess data
 
     #calculate viewshed
@@ -60,7 +60,7 @@ def project_setup(dataset_uri):
     grass.script.run_command('g.mapset',
                              mapset = 'PERMANENT',
                              location = 'invest')
-    
+
 ##    LOGGER.debug("Adding mapset.")
 ##    grass.script.run_command('g.mapsets',
 ##                             addmapset = 'invest')
@@ -85,9 +85,9 @@ def viewshed(dataset_uri, feature_set_uri, dataset_out_uri):
     LOGGER.debug("Computing viewshed for each point.")
     shapefile = ogr.Open(feature_set_uri)
     layer = shapefile.GetLayer()
-    feature_count = layer.GetFeatureCount()    
+    feature_count = layer.GetFeatureCount()
     for feature_id in xrange(feature_count):
-        feature = layer.GetFeature(feature_id)    
+        feature = layer.GetFeature(feature_id)
         geom = feature.GetGeometryRef()
         x, y, _ = geom.GetPoint()
         coordinate = [x, y]
@@ -120,5 +120,5 @@ def viewshed(dataset_uri, feature_set_uri, dataset_out_uri):
                              output=dataset_out_uri)
 
 if __name__ == "__main__":
-         
+
     execute()

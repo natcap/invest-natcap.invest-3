@@ -1,22 +1,30 @@
 """distutils setup.py for InVEST 3.0 framework and models"""
 
-from distutils.core import setup
-from distutils.extension import Extension
-from distutils.core import Command
-import distutils.sysconfig
+try:
+    from setuptools.core import setup
+    from setuptools.extension import Extension
+    from setuptools.core import Command
+    import setuptools.sysconfig as sysconfig
+except:
+    from distutils.core import setup
+    from distutils.extension import Extension
+    from distutils.core import Command
+    import distutils.sysconfig as sysconfig
+
 import platform
 import os
 import sys
 import glob
 import matplotlib
 import zipfile
-
+import scipy
+import osgeo #used to trigger the os.environ['GDAL_DATA']
 
 import numpy as np
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
-SITE_PACKAGES = distutils.sysconfig.get_python_lib()
+SITE_PACKAGES = sysconfig.get_python_lib()
 
 from invest_natcap import build_utils
 VERSION = build_utils.invest_version(
@@ -25,14 +33,12 @@ VERSION = build_utils.invest_version(
 VERSION = VERSION.replace(':', '_').replace(' ', '_')
 from invest_natcap import invest_version
 ARCHITECTURE = invest_version.py_arch
-CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
-                       'invest_natcap/cython_modules/simplequeue.c']
 
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the
 #same version.
-DIST_DIR = 'invest_%s_%s' % (VERSION.replace('.','_').replace(':', '_'),
-    ARCHITECTURE)
+DIST_DIR = 'invest_%s_%s' % (
+    VERSION.replace('.', '_').replace(':', '_'), ARCHITECTURE)
 
 class ZipCommand(Command):
     description = 'Custom command to recurseively zip a folder'
@@ -102,6 +108,7 @@ packages = [
     'invest_natcap.scenario_generator',
     'invest_natcap.sdr',
     'invest_natcap.habitat_suitability',
+    'invest_natcap.seasonal_water_yield',
 ]
 
 def get_iui_resource_data_files(lib_path):
@@ -133,15 +140,17 @@ if platform.system() == 'Windows':
             'dist_dir': DIST_DIR,
             'packages': packages,
             'skip_archive': True,
-            'dll_excludes': ['POWRPROF.dll', 'Secur32.dll', 'SHFOLDER.dll',
-                'msvcp90.dll', 'geos_c.dll'],
+            'dll_excludes': [
+                'POWRPROF.dll', 'Secur32.dll', 'SHFOLDER.dll', 'msvcp90.dll',
+                'geos_c.dll'],
             }
-         }
+        }
 
-    # When building py2exe binaries on windows server, the built application
+    # When building py2exe binaries with scipy >= 0.13.0, the built application
     # won't run unless we import _ufuncs_cxx.
-    if platform.uname()[2] == '2008ServerR2':
-        py2exe_args['options']['py2exe']['includes'].append('scipy.special._ufuncs_cxx')
+    if tuple([int(x) for x in scipy.__version__.split('.')])[1] >= 13:
+        py2exe_args['options']['py2exe']['includes'].append(
+          'scipy.special._ufuncs_cxx')
 
     #These are the exes that will get built
     py2exe_args['console'] = \
@@ -175,6 +184,7 @@ if platform.system() == 'Windows':
          'routedem.py',
          'invest_sdr.py',
          'invest_habitat_suitability.py',
+         'invest_seasonal_water_yield.py',
         ]
 
     from py2exe.build_exe import py2exe as py2exeCommand
@@ -194,7 +204,8 @@ if platform.system() == 'Windows':
             # executeables and otherwise muck up our other distributions.
             self.distribution.data_files += [
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.json')),
-                ('.', ['geos_c.dll', 'libgcc_s_dw2-1.dll', 'libstdc++-6.dll']),
+                ('.', ['geos_c.dll', 'libgcc_s_dw2-1.dll', 'libstdc++-6.dll',
+                       'msvcr90.dll', 'msvcp90.dll']),
                 ('invest_natcap/recreation',
                     ['invest_natcap/recreation/recreation_client_config.json',
                      'invest_natcap/recreation/server_list.json']),
@@ -206,6 +217,12 @@ if platform.system() == 'Windows':
                 ('invest_natcap/reporting/reporting_data',
                     glob.glob('invest_natcap/reporting/reporting_data/*')),
             ] + matplotlib.get_py2exe_datafiles()
+
+            #GDAL_DATA environment variable should always exist on a windows
+            #py2exe build and is a bug if it doesn't
+            for root_dir, sub_folders, file_list in os.walk(os.environ['GDAL_DATA']):
+                self.distribution.data_files.append(
+                  ('osgeo/data/gdal', [os.path.join(root_dir, x) for x in  file_list]))
 
             # These are the GDAL DLLs.  They are absolutely required for running the
             # Windows executeables on XP.  For whatever reason, they do not appear to be
@@ -273,7 +290,7 @@ REQUIRES_LIST = [
     'cython (>=0.19.1)',
     'scipy (>=0.12.0)',
     'osgeo (>=1.9.2)',
-    'pygeoprocessing (>=0.1.4)',
+    'pygeoprocessing (>=0.2.1)',
     ]
 
 #The standard distutils setup command
@@ -282,12 +299,21 @@ setup(name='invest_natcap',
       packages=packages,
       cmdclass=CMD_CLASSES,
       requires=REQUIRES_LIST,
-      include_dirs = [np.get_include()],
+      include_dirs=[np.get_include()],
       data_files=data_files,
       ext_modules=cythonize([
         Extension(
-            name="scenic_quality_cython_core",
-            sources=['invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
+          name="scenic_quality_cython_core",
+          sources=[
+            'invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
+        Extension(
+          name="ndr_core",
+          sources=['invest_natcap/ndr/ndr_core.pyx'],
+          language="c++"),
+        Extension(
+          name="seasonal_water_yield_core",
+          sources=['invest_natcap/seasonal_water_yield/seasonal_water_yield_core.pyx'],
+          language="c++"),
         ]),
       **py2exe_args)
 

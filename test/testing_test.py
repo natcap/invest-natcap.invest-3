@@ -6,7 +6,7 @@ import glob
 import invest_natcap.testing as testing
 from invest_natcap.testing import data_storage
 from invest_natcap.testing import test_writing
-from invest_natcap import raster_utils
+from pygeoprocessing import geoprocessing as raster_utils
 
 POLLINATION_DATA = os.path.join('invest-data/test/data', 'pollination', 'samp_input')
 CARBON_DATA = os.path.join('invest-data/test/data', 'carbon', 'input')

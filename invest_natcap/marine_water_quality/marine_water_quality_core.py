@@ -40,7 +40,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
     adv_u_flat = adv_u_array.flatten()
     adv_v_flat = adv_v_array.flatten()
 
-    LOGGER = logging.getLogger('marine_water_quality')
+    LOGGER = logging.getLogger('invest_natcap.marine_water_quality.core')
     LOGGER.info('Calculating advection diffusion')
     t0 = time.clock()
 

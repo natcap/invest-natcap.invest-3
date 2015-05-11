@@ -11,7 +11,7 @@ import copy
 
 import numpy as np
 
-LOGGER = logging.getLogger('FISHERIES')
+LOGGER = logging.getLogger('invest_natcap.fisheries.hst_io')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 

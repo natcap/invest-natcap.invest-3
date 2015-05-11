@@ -12,7 +12,7 @@ from osgeo import ogr
 
 import pygeoprocessing.geoprocessing
 
-LOGGER = logging.getLogger('hydropower_water_yield')
+LOGGER = logging.getLogger('invest_natcap.hydropower.hydropower_water_yield')
 
 def execute(args):
     """Executes the hydropower/water_yield model
@@ -92,7 +92,8 @@ def execute(args):
     clipped_lulc_uri = pygeoprocessing.geoprocessing.temporary_filename()
     eto_uri = pygeoprocessing.geoprocessing.temporary_filename()
     precip_uri = pygeoprocessing.geoprocessing.temporary_filename()
-    depth_to_root_rest_layer_uri = pygeoprocessing.geoprocessing.temporary_filename()
+    depth_to_root_rest_layer_uri = (
+        pygeoprocessing.geoprocessing.temporary_filename())
     pawc_uri = pygeoprocessing.geoprocessing.temporary_filename()
 
     sheds_uri = args['watersheds_uri']
@@ -107,7 +108,8 @@ def execute(args):
         eto_uri, precip_uri, depth_to_root_rest_layer_uri, pawc_uri,
         clipped_lulc_uri]
 
-    pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(args['lulc_uri'])
+    pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        args['lulc_uri'])
     pygeoprocessing.geoprocessing.align_dataset_list(
         original_raster_uris, aligned_raster_uris,
         ['nearest'] * len(original_raster_uris),
@@ -125,8 +127,9 @@ def execute(args):
     reader = csv.DictReader(biophysical_table_file)
     for row in reader:
         bio_dict[int(row['lucode'])] = {
-                'Kc':float(row['Kc']), 'root_depth':float(row['root_depth']),
-                'LULC_veg':float(row['LULC_veg'])}
+            'Kc':float(row['Kc']), 'root_depth':float(row['root_depth']),
+            'LULC_veg':float(row['LULC_veg'])
+            }
 
     biophysical_table_file.close()
 
@@ -149,9 +152,9 @@ def execute(args):
 
     # Paths for the watershed and subwatershed tables
     watershed_results_csv_uri = os.path.join(
-            output_dir, 'watershed_results_wyield%s.csv' % file_suffix)
+        output_dir, 'watershed_results_wyield%s.csv' % file_suffix)
     subwatershed_results_csv_uri = os.path.join(
-            output_dir, 'subwatershed_results_wyield%s.csv' % file_suffix)
+        output_dir, 'subwatershed_results_wyield%s.csv' % file_suffix)
 
     # The nodata value that will be used for created output rasters
     out_nodata = - 1.0
@@ -203,25 +206,25 @@ def execute(args):
     # operations
     Kc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_Kc_raster_uri)
     if Kc_nodata is None:
-        Kc_nodata = float(pygeoprocessing.geoprocessing.calculate_value_not_in_dataset_uri(tmp_Kc_raster_uri))
+        Kc_nodata = -9999
     root_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_root_raster_uri)
     if root_nodata is None:
-        root_nodata = float(pygeoprocessing.geoprocessing.calculate_value_not_in_dataset_uri(tmp_root_raster_uri))
+        root_nodata = -9999
     veg_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(tmp_veg_raster_uri)
     if veg_nodata is None:
-        veg_nodata = float(pygeoprocessing.geoprocessing.calculate_value_not_in_dataset_uri(tmp_veg_raster_uri))
+        veg_nodata = -9999
     precip_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(precip_uri)
     if precip_nodata is None:
-        precip_nodata = float(pygeoprocessing.geoprocessing.calculate_value_not_in_dataset_uri(precip_uri))
+        precip_nodata = -9999
     eto_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(eto_uri)
     if eto_nodata is None:
-        eto_nodata = float(pygeoprocessing.geoprocessing.calculate_value_not_in_dataset_uri(eto_uri))
+        eto_nodata = -9999
     root_rest_layer_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(depth_to_root_rest_layer_uri)
     if root_rest_layer_nodata is None:
-        root_rest_layer_nodata = float(pygeoprocessing.geoprocessing.calculate_value_not_in_dataset_uri(depth_to_root_rest_layer_uri))
+        root_rest_layer_nodata = -9999
     pawc_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(pawc_uri)
     if pawc_nodata is None:
-        pawc_nodata = float(pygeoprocessing.geoprocessing.calculate_value_not_in_dataset_uri(pawc_uri))
+        pawc_nodata = -9999
 
     def pet_op(eto_pix, Kc_pix):
         """Vectorize operation for calculating the plant potential
@@ -314,9 +317,6 @@ def execute(args):
             | (root == root_nodata) | (soil == root_rest_layer_nodata) |
             (pawc == pawc_nodata) | (veg == veg_nodata) | (precip == 0.0) |
             (Kc == 0.0) | (eto == 0.0), out_nodata, result)
-
-    # Vectorize operation
-    fractp_vec = numpy.vectorize(fractp_op, otypes=[numpy.float])
 
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
@@ -464,7 +464,6 @@ def execute(args):
     # Get the pixel mean for aggregated for water yield and the number of
     # pixels in which it aggregated over
     wyield_mean_dict = agg_wyield_tup.pixel_mean
-    hectare_mean_dict = agg_wyield_tup.hectare_mean
     pixel_count_dict = agg_wyield_tup.n_pixels
     # Add the wyield mean and number of pixels to the shapefile
     add_dict_to_shape(
@@ -476,8 +475,8 @@ def execute(args):
 
     # List of wanted fields to output in the watershed CSV table
     field_list_ws = [
-            'ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-            'wyield_mn', 'wyield_vol']
+        'ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+        'wyield_mn', 'wyield_vol']
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
@@ -836,7 +835,6 @@ def compute_water_yield_volume(shape_uri, pixel_area):
         pixel_count = feat.GetField(pixel_count_id)
 
         geom = feat.GetGeometryRef()
-        feat_area = geom.GetArea()
 
         # Calculate water yield volume,
         #1000 is for converting the mm of wyield to meters

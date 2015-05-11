@@ -13,7 +13,7 @@ from osgeo import gdal
 from scipy import ndimage
 
 
-LOGGER = logging.getLogger('overlap_analysis')
+LOGGER = logging.getLogger('invest_natcap.overlap_analysis.overlap_analysis')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -93,8 +93,8 @@ def execute(args):
         aoi_dataset_uri, args['zone_layer_uri'], burn_values=[1])
 
     #Want to get each interest layer, and rasterize them, then combine them all
-    #at the end. Could do a list of the filenames that we are creating within 
-    #the intermediate directory, so that we can access later.   
+    #at the end. Could do a list of the filenames that we are creating within
+    #the intermediate directory, so that we can access later.
     raster_uris, raster_names = make_indiv_rasters(
         intermediate_dir, overlap_shape_uris, aoi_dataset_uri)
 
@@ -160,8 +160,8 @@ def format_over_table(over_tbl):
     over_dict = {}
 
     #USING EXPLICIT STRING CALLS to the layers table (these should not be unique
-    #to the type of table, but rather, are items that ALL layers tables should 
-    #contain). I am casting both of the optional values to floats, since both 
+    #to the type of table, but rather, are items that ALL layers tables should
+    #contain). I am casting both of the optional values to floats, since both
     #will be used for later calculations.
     for row in reader:
         LOGGER.debug(row)
@@ -251,7 +251,7 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
     aoi_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
     aoi_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(aoi_raster_uri)
 
-    #When we go to actually burn, should have a "0" where there is AOI, not 
+    #When we go to actually burn, should have a "0" where there is AOI, not
     #same as nodata. Need the 0 for later combination function.
     activities_uri = os.path.join(output_dir, 'hu_freq.tif')
 
@@ -273,18 +273,18 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
                 this is the sum of all activities that are taking place in that
                 area.
         '''
-        #We have pre-decided that nodata for the activity pixel will produce a 
-        #different result from the "no activities within that AOI area" result 
+        #We have pre-decided that nodata for the activity pixel will produce a
+        #different result from the "no activities within that AOI area" result
         #of 0.
 
         aoi_pixel_vector = activity_pixels[0]
         aoi_nodata_mask = aoi_pixel_vector == aoi_nodata
-        
+
         sum_pixel = numpy.zeros(aoi_pixel_vector.shape)
 
         for activ in activity_pixels[1::]:
             sum_pixel[activ == 1] += 1
-        
+
         return numpy.where(aoi_nodata_mask, aoi_nodata, sum_pixel)
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
@@ -345,7 +345,7 @@ def create_weighted_raster(
             U{i,j}:
                 If do_intra:
                     U{i,j} = X{i,j} / X{max}
-                        X {i,j} = intra-activity weight of activity j in 
+                        X {i,j} = intra-activity weight of activity j in
                             grid cell i
                         X{max} = The max potential intra-activity weight for all
                             cells where activity j occurs.
@@ -367,21 +367,21 @@ def create_weighted_raster(
     aoi_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(aoi_raster_uri)
     pixel_size_out = pygeoprocessing.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
 
-    #If intra-activity weighting is desired, we need to create a whole new set 
+    #If intra-activity weighting is desired, we need to create a whole new set
     #of values, where the burn value of each pixel is the attribute value of the
     #polygon that it resides within. This means that we need the AOI raster, and
-    #need to rebuild based on that, then move on from there. I'm abstracting 
+    #need to rebuild based on that, then move on from there. I'm abstracting
     #this to a different file for ease of reading. It will return a tuple of two
     #lists- the first will be the list of rasterized aoi/layers, and the second
-    #will be a list of the original file names in the same order as the layers 
-    #so that the dictionaries with other weights can be cross referenced. 
+    #will be a list of the original file names in the same order as the layers
+    #so that the dictionaries with other weights can be cross referenced.
     if do_intra:
         weighted_raster_uris, weighted_raster_names = (
             make_indiv_weight_rasters(
                 intermediate_dir, aoi_raster_uri, layers_dict, intra_name))
 
     #Need to get the X{max} now, so iterate through the features on a layer, and
-    #make a dictionary that maps the name of the layer to the max potential 
+    #make a dictionary that maps the name of the layer to the max potential
     #intra-activity weight
     if do_intra:
         max_intra_weights = {}
@@ -404,9 +404,9 @@ def create_weighted_raster(
     if do_inter:
         max_inter_weight = max(inter_weights_dict.values())
 
-    #Assuming that inter-activity valuation is desired, whereas intra-activity 
-    #is not, we should use the original rasterized layers as the pixels to 
-    #combine. If, on the other hand, inter is not wanted, then we should just 
+    #Assuming that inter-activity valuation is desired, whereas intra-activity
+    #is not, we should use the original rasterized layers as the pixels to
+    #combine. If, on the other hand, inter is not wanted, then we should just
     #use 1 in our equation.
 
     def combine_weighted_pixels(*pixel_parameter_list):
@@ -417,7 +417,7 @@ def create_weighted_raster(
         #if aoi_pixel == aoi_nodata:
         #    return aoi_nodata
         for i in range(1, n+1):
-            #This will either be a 0 or 1, since the burn value for the 
+            #This will either be a 0 or 1, since the burn value for the
             #unweighted raster files was a 1.
             U_vector = pixel_parameter_list[i]
             #U = pixel_parameter_list[i]
@@ -430,7 +430,7 @@ def create_weighted_raster(
                 I = 1
 
             #This is coming from the documentation, refer to additional info in
-            #the docstring. n gets cast to a float so that it can be used 
+            #the docstring. n gets cast to a float so that it can be used
             #in division.
             curr_pix_sum_vector += ((1/float(n)) * U_vector * I)
         return numpy.where(aoi_nodata_mask, aoi_nodata, curr_pix_sum_vector)
@@ -443,7 +443,7 @@ def create_weighted_raster(
         #    return aoi_nodata
         for i in range(1, n+1):
 
-            #Can assume that if we have gotten here, that intra-activity 
+            #Can assume that if we have gotten here, that intra-activity
             #weighting is desired. Compute U for that weighting, assuming the
             #raster pixels are the intra weights.
             layer_name = weighted_raster_names[i]
@@ -565,7 +565,7 @@ def make_indiv_weight_rasters(
     #we go to combine them. Will need the aoi_nodata for later as well.
     weighted_raster_uris = [aoi_raster_uri]
     #Inserting 'aoi' as a placeholder so that when I go through the list, I can
-    #reference other indicies without having to convert for the missing first 
+    #reference other indicies without having to convert for the missing first
     #element in names.
     weighted_names = ['aoi']
     LOGGER.debug('layers_dict %s', layers_dict)
@@ -574,8 +574,8 @@ def make_indiv_weight_rasters(
 
         outgoing_uri = os.path.join(input_dir, basename + ".tif")
 
-        #Setting nodata value to 0 so that the nodata pixels can be used 
-        #directly in calculations without messing up the weighted total 
+        #Setting nodata value to 0 so that the nodata pixels can be used
+        #directly in calculations without messing up the weighted total
         #equations for the second output file.
         nodata = 0
         pygeoprocessing.geoprocessing.new_raster_from_base_uri(
