@@ -10,7 +10,7 @@ import gdal
 import pygeoprocessing
 import pygeoprocessing.routing
 
-
+import seasonal_water_yield_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -99,10 +99,12 @@ def execute(args):
 
     flow_dir_uri = os.path.join(
         args['workspace_dir'], 'flow_dir%s.tif' % file_suffix)
+    LOGGER.info('calc flow direction')
     pygeoprocessing.routing.flow_direction_d_inf(dem_uri_aligned, flow_dir_uri)
 
     flow_accum_uri = os.path.join(
         args['workspace_dir'], 'flow_accum%s.tif' % file_suffix)
+    LOGGER.info('calc flow accumulation')
     pygeoprocessing.routing.flow_accumulation(
         flow_dir_uri, dem_uri_aligned, flow_accum_uri)
     stream_uri = os.path.join(
@@ -111,6 +113,7 @@ def execute(args):
     pygeoprocessing.routing.stream_threshold(
         flow_accum_uri, threshold_flow_accumulation, stream_uri)
 
+    LOGGER.info('calculate quick flow')
     calculate_quick_flow(
         precip_uri_aligned_list, args['rain_events_table_uri'],
         lulc_uri_aligned, args['cn_table_uri'], cn_uri, stream_uri, qfi_uri,
@@ -132,10 +135,11 @@ def execute(args):
     vri_uri = os.path.join(args['workspace_dir'], 'vri%s.tif' % file_suffix)
     aet_uri = os.path.join(args['workspace_dir'], 'aet%s.tif' % file_suffix)
 
+    LOGGER.info('calculate quick flow')
     calculate_slow_flow(
         args['aoi_uri'], precip_uri_aligned_list, et0_uri_aligned_list,
         flow_dir_uri, dem_uri_aligned, lulc_uri_aligned,
-        kc_lookup, alpha_m, beta_i, gamma, qfi_uri, recharge_uri,
+        kc_lookup, alpha_m, beta_i, gamma, recharge_uri,
         recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri, stream_uri)
 
 
@@ -222,16 +226,23 @@ def calculate_quick_flow(
 
 def calculate_slow_flow(
         aoi_uri, precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
-        kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
+        kc_lookup, alpha_m, beta_i, gamma,
         recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri,
         stream_uri):
     """calculate slow flow index"""
 
-    import seasonal_water_yield_core
+    LOGGER.info('calculating flow weights')
+    out_dir = os.path.dirname(recharge_uri)
+    outflow_weights_uri = os.path.join(out_dir, 'outflow_weights.tif')
+    outflow_direction_uri = os.path.join(out_dir, 'outflow_direction.tif')
+    seasonal_water_yield_core.calculate_flow_weights(
+        flow_dir_uri, outflow_weights_uri, outflow_direction_uri)
+
     seasonal_water_yield_core.calculate_recharge(
-        precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
-        kc_lookup, alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri,
-        recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri)
+        precip_uri_list, et0_uri_list, flow_dir_uri, outflow_weights_uri,
+        outflow_direction_uri, dem_uri, lulc_uri,
+        kc_lookup, alpha_m, beta_i, gamma, stream_uri, recharge_uri,
+        recharge_avail_uri, r_sum_avail_uri, aet_uri)
 
     #calcualte Qb as the sum of recharge_avail over the aoi
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
@@ -258,17 +269,14 @@ def calculate_slow_flow(
     r_sum_avail_pour_uri = os.path.join(out_dir, 'r_sum_avail_pour.tif')
 
     seasonal_water_yield_core.calculate_r_sum_avail_pour(
-        r_sum_avail_uri, flow_dir_uri, r_sum_avail_pour_uri)
+        r_sum_avail_uri, outflow_weights_uri, outflow_direction_uri,
+        r_sum_avail_pour_uri)
 
     sf_uri = os.path.join(out_dir, 'sf.tif')
     sf_down_uri = os.path.join(out_dir, 'sf_down.tif')
 
     outflow_weights_uri = os.path.join(out_dir, 'outflow_weights.tif')
     outflow_direction_uri = os.path.join(out_dir, 'outflow_direction.tif')
-
-    LOGGER.info('calculating flow weights')
-    seasonal_water_yield_core.calculate_flow_weights(
-        flow_dir_uri, outflow_weights_uri, outflow_direction_uri)
 
     LOGGER.info('calculating slow flow')
     seasonal_water_yield_core.route_sf(
