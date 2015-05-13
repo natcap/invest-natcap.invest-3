@@ -187,6 +187,14 @@ def execute(args):
         outflow_weights_uri, outflow_direction_uri,
         r_sum_avail_pour_uri, sf_uri, sf_down_uri, qb_out_uri)
 
+    LOGGER.info('    (\\w/)')
+    LOGGER.info('    (..  \\ ')
+    LOGGER.info('   _/  )  \\______')
+    LOGGER.info('  (oo /\'\\        )`,')
+    LOGGER.info('   `--\' (v  __( / ||')
+    LOGGER.info('         |||  ||| ||')
+    LOGGER.info('        //_| //_|    SWY Complete!')
+
 
 def calculate_quick_flow(
         precip_uri_list, lulc_uri,
