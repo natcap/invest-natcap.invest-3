@@ -4,6 +4,7 @@ import logging
 import os
 import collections
 import sys
+import gc
 
 import numpy
 cimport numpy
@@ -37,8 +38,8 @@ cdef int N_MONTHS = 12
 
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double INF = numpy.inf
-cdef int N_BLOCK_ROWS = 6
-cdef int N_BLOCK_COLS = 6
+cdef int N_BLOCK_ROWS = 8
+cdef int N_BLOCK_COLS = 8
 
 cdef class BlockCache:
     cdef numpy.int32_t[:,:] row_tag_cache
@@ -92,7 +93,10 @@ cdef class BlockCache:
                     'make the runtime slow for other algorithms. %s',
                     band.GetDescription())
 
-
+    def __dealloc__(self):
+        self.band_list[:] = []
+        self.block_list[:] = []
+        self.update_list[:] = []
 
     #@cython.boundscheck(False)
     @cython.wraparound(False)
@@ -2683,9 +2687,6 @@ def resolve_flats(
     LOGGER.info('labeling flats')
     label_flats(dem_uri, low_edges, labels_uri)
 
-    #LOGGER.info('cleaning high edges')
-    #clean_high_edges(labels_uri, high_edges)
-
     drain_flats(
         high_edges, low_edges, labels_uri, flow_direction_uri, flat_mask_uri)
 
@@ -2693,30 +2694,14 @@ def resolve_flats(
 
 
 def calculate_recharge(
-    precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri, kc_lookup,
-    alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri, recharge_avail_uri,
-    r_sum_avail_uri, aet_uri, vri_uri):
+    precip_uri_list, et0_uri_list, qfi_uri_list, flow_dir_uri, outflow_weights_uri,
+    outflow_direction_uri, dem_uri, lulc_uri, kc_lookup, alpha_m, beta_i, gamma,
+    stream_uri, recharge_uri, recharge_avail_uri, r_sum_avail_uri,
+    aet_uri, kc_uri):
 
     cdef deque[int] outlet_cell_deque
-
-    out_dir = os.path.dirname(recharge_uri)
-    outflow_weights_uri = os.path.join(out_dir, 'outflow_weights.tif')
-    outflow_direction_uri = os.path.join(out_dir, 'outflow_direction.tif')
-
     find_outlets(
         dem_uri, flow_dir_uri, outlet_cell_deque)
-    calculate_flow_weights(
-        flow_dir_uri, outflow_weights_uri, outflow_direction_uri)
-
-    kc_uri = os.path.join(out_dir, 'kc.tif')
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        lulc_uri, kc_lookup, kc_uri, gdal.GDT_Float32, -1)
-
-    qfi_uri_list = []
-    for index in xrange(N_MONTHS):
-        qfi_uri_list.append(os.path.join(out_dir, 'qf_%d.tif' % (index+1)))
-
-
     route_recharge(
         precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
         r_sum_avail_uri, aet_uri, alpha_m, beta_i, gamma, qfi_uri_list,
@@ -2724,16 +2709,12 @@ def calculate_recharge(
         outlet_cell_deque)
 
 
-def calculate_r_sum_avail_pour(r_sum_avail_uri, flow_direction_uri, r_sum_avail_pour_uri):
+def calculate_r_sum_avail_pour(
+    r_sum_avail_uri, outflow_weights_uri,
+    outflow_direction_uri, r_sum_avail_pour_uri):
     """Calculate how r_sum_avail r_sum_avail_pours directly into its neighbors"""
 
     out_dir = os.path.dirname(r_sum_avail_uri)
-    outflow_weights_uri = os.path.join(out_dir, 'outflow_weights.tif')
-    outflow_direction_uri = os.path.join(out_dir, 'outflow_direction.tif')
-
-    calculate_flow_weights(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
-
     r_sum_avail_ds = gdal.Open(r_sum_avail_uri)
     r_sum_avail_band = r_sum_avail_ds.GetRasterBand(1)
     block_col_size, block_row_size = r_sum_avail_band.GetBlockSize()
@@ -2873,8 +2854,7 @@ def route_sf(
     time(&start)
 
     cdef deque[int] cells_to_process
-    find_outlets(
-        dem_uri, outflow_direction_uri, cells_to_process)
+    find_outlets(dem_uri, outflow_direction_uri, cells_to_process)
 
     cdef c_set[int] cells_in_queue
     for cell in cells_to_process:

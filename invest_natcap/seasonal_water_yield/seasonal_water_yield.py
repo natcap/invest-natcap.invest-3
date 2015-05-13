@@ -10,7 +10,7 @@ import gdal
 import pygeoprocessing
 import pygeoprocessing.routing
 
-
+import seasonal_water_yield_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -99,10 +99,12 @@ def execute(args):
 
     flow_dir_uri = os.path.join(
         args['workspace_dir'], 'flow_dir%s.tif' % file_suffix)
+    LOGGER.info('calc flow direction')
     pygeoprocessing.routing.flow_direction_d_inf(dem_uri_aligned, flow_dir_uri)
 
     flow_accum_uri = os.path.join(
         args['workspace_dir'], 'flow_accum%s.tif' % file_suffix)
+    LOGGER.info('calc flow accumulation')
     pygeoprocessing.routing.flow_accumulation(
         flow_dir_uri, dem_uri_aligned, flow_accum_uri)
     stream_uri = os.path.join(
@@ -111,10 +113,40 @@ def execute(args):
     pygeoprocessing.routing.stream_threshold(
         flow_accum_uri, threshold_flow_accumulation, stream_uri)
 
+    LOGGER.info('calculating flow weights')
+    outflow_weights_uri = os.path.join(
+        args['workspace_dir'], 'outflow_weights%s.tif' % file_suffix)
+    outflow_direction_uri = os.path.join(
+        args['workspace_dir'], 'outflow_direction%s.tif' % file_suffix)
+    seasonal_water_yield_core.calculate_flow_weights(
+        flow_dir_uri, outflow_weights_uri, outflow_direction_uri)
+
+
+    si_uri = os.path.join(args['workspace_dir'], 'si%s.tif' % file_suffix)
+
+    LOGGER.info('loading number of monthly events')
+    rain_events_lookup = pygeoprocessing.geoprocessing.get_lookup_from_table(
+        args['rain_events_table_uri'], 'month')
+    n_events = dict([
+        (month, rain_events_lookup[month]['events'])
+        for month in rain_events_lookup])
+
+    LOGGER.info('calculating curve number')
+    cn_lookup = pygeoprocessing.geoprocessing.get_lookup_from_table(
+        args['cn_table_uri'], 'lucode')
+    cn_lookup = dict([
+        (lucode, cn_lookup[lucode]['cn']) for lucode in cn_lookup])
+
+    cn_nodata = -1
+    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        lulc_uri_aligned, cn_lookup, cn_uri, gdal.GDT_Float32, cn_nodata,
+        exception_flag='values_required')
+
+    LOGGER.info('calculate quick flow')
     calculate_quick_flow(
-        precip_uri_aligned_list, args['rain_events_table_uri'],
-        lulc_uri_aligned, args['cn_table_uri'], cn_uri, stream_uri, qfi_uri,
-        qf_monthly_uri_list, args['workspace_dir'])
+        precip_uri_aligned_list,
+        lulc_uri_aligned, cn_uri, n_events, stream_uri, qfi_uri,
+        qf_monthly_uri_list, si_uri)
 
     biophysical_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
         args['biophysical_table_uri'], 'lucode')
@@ -132,38 +164,38 @@ def execute(args):
     vri_uri = os.path.join(args['workspace_dir'], 'vri%s.tif' % file_suffix)
     aet_uri = os.path.join(args['workspace_dir'], 'aet%s.tif' % file_suffix)
 
+    r_sum_avail_pour_uri = os.path.join(
+        args['workspace_dir'], 'r_sum_avail_pour%s.tif' % file_suffix)
+    sf_uri = os.path.join(
+        args['workspace_dir'], 'sf%s.tif' % file_suffix)
+    sf_down_uri = os.path.join(
+        args['workspace_dir'], 'sf_down%s.tif' % file_suffix)
+    qb_out_uri = os.path.join(
+        args['workspace_dir'], 'qb%s.txt' % file_suffix)
+
+    LOGGER.info('classifying kc')
+    kc_uri = os.path.join(args['workspace_dir'], 'kc%s.tif' % file_suffix)
+    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        lulc_uri_aligned, kc_lookup, kc_uri, gdal.GDT_Float32, -1)
+
+    LOGGER.info('calculate quick flow')
     calculate_slow_flow(
         args['aoi_uri'], precip_uri_aligned_list, et0_uri_aligned_list,
-        flow_dir_uri, dem_uri_aligned, lulc_uri_aligned,
-        kc_lookup, alpha_m, beta_i, gamma, qfi_uri, recharge_uri,
-        recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri, stream_uri)
+        qf_monthly_uri_list, flow_dir_uri, dem_uri_aligned, lulc_uri_aligned,
+        kc_lookup, alpha_m, beta_i, gamma, kc_uri, recharge_uri,
+        recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri, stream_uri,
+        outflow_weights_uri, outflow_direction_uri,
+        r_sum_avail_pour_uri, sf_uri, sf_down_uri, qb_out_uri)
 
 
 def calculate_quick_flow(
-        precip_uri_list, rain_events_table_uri, lulc_uri,
-        cn_table_uri, cn_uri, stream_uri, qfi_uri, qf_monthly_uri_list,
-        intermediate_dir):
+        precip_uri_list, lulc_uri,
+        cn_uri, n_events, stream_uri, qfi_uri, qf_monthly_uri_list,
+        si_uri):
     """Calculates quick flow """
 
-    LOGGER.info('loading number of monthly events')
-    rain_events_lookup = pygeoprocessing.geoprocessing.get_lookup_from_table(
-        rain_events_table_uri, 'month')
-    n_events = dict([
-        (month, rain_events_lookup[month]['events'])
-        for month in rain_events_lookup])
-
-    LOGGER.info('calculating curve number')
-    cn_lookup = pygeoprocessing.geoprocessing.get_lookup_from_table(
-        cn_table_uri, 'lucode')
-    cn_lookup = dict([
-        (lucode, cn_lookup[lucode]['cn']) for lucode in cn_lookup])
-
-    cn_nodata = -1
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        lulc_uri, cn_lookup, cn_uri, gdal.GDT_Float32, cn_nodata,
-        exception_flag='values_required')
-
     si_nodata = -1
+    cn_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(cn_uri)
     def si_op(ci_array, stream_array):
         """potential maximum retention"""
         si_array = 1000.0 / ci_array - 10
@@ -172,7 +204,6 @@ def calculate_quick_flow(
         return si_array
 
     LOGGER.info('calculating Si')
-    si_uri = os.path.join(intermediate_dir, 'si.tif')
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(lulc_uri)
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [cn_uri, stream_uri], si_op, si_uri, gdal.GDT_Float32,
@@ -184,7 +215,6 @@ def calculate_quick_flow(
         precip_uri_list[0])
 
     for m_index in range(1, N_MONTHS + 1):
-
         def qf_op(pm_array, s_array, stream_array):
             """calculate quickflow"""
             inner_value = pm_array/float(n_events[m_index])/25.4 - 0.2 * s_array
@@ -205,6 +235,7 @@ def calculate_quick_flow(
             qf_monthly_uri_list[m_index-1], gdal.GDT_Float32, qf_nodata,
             pixel_size, 'intersection', vectorize_op=False,
             datasets_are_pre_aligned=True)
+        del qf_op
 
     LOGGER.info('calculating QFi')
     def qfi_sum(*qf_values):
@@ -221,54 +252,48 @@ def calculate_quick_flow(
 
 
 def calculate_slow_flow(
-        aoi_uri, precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
-        kc_lookup, alpha_m, beta_i, gamma, qfi_uri,
+        aoi_uri, precip_uri_list, et0_uri_list, qfi_uri_list, flow_dir_uri,
+        dem_uri, lulc_uri, kc_lookup, alpha_m, beta_i, gamma, kc_uri,
         recharge_uri, recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri,
-        stream_uri):
+        stream_uri, outflow_weights_uri, outflow_direction_uri,
+        r_sum_avail_pour_uri, sf_uri, sf_down_uri, qb_out_uri):
     """calculate slow flow index"""
 
-    import seasonal_water_yield_core
     seasonal_water_yield_core.calculate_recharge(
-        precip_uri_list, et0_uri_list, flow_dir_uri, dem_uri, lulc_uri,
-        kc_lookup, alpha_m, beta_i, gamma, qfi_uri, stream_uri, recharge_uri,
-        recharge_avail_uri, r_sum_avail_uri, aet_uri, vri_uri)
+        precip_uri_list, et0_uri_list, qfi_uri_list, flow_dir_uri,
+        outflow_weights_uri, outflow_direction_uri, dem_uri, lulc_uri,
+        kc_lookup, alpha_m, beta_i, gamma, stream_uri, recharge_uri,
+        recharge_avail_uri, r_sum_avail_uri, aet_uri, kc_uri)
 
     #calcualte Qb as the sum of recharge_avail over the aoi
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
         recharge_avail_uri, aoi_uri)
 
-    qb = qb_results.total[9999] / qb_results.n_pixels[9999]
+    qb_result = qb_results.total[9999] / qb_results.n_pixels[9999]
     #9999 is the value used to index fields if no shapefile ID is provided
-    LOGGER.info("Qb = %f", qb)
+    qb_file = open(qb_out_uri, 'w')
+    qb_file.write("%f\n" % qb_result)
+    qb_file.close()
+    LOGGER.info("Qb = %f", qb_result)
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         recharge_uri)
     ri_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(recharge_uri)
 
-    def vri_op(ri):
+    def vri_op(ri_array):
         """calc vri index"""
-        return numpy.where(ri != ri_nodata, ri / qb, ri_nodata)
+        return numpy.where(
+            ri_array != ri_nodata, ri_array / qb_result, ri_nodata)
 
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [recharge_uri], vri_op, vri_uri,
         gdal.GDT_Float32, ri_nodata, pixel_size, 'intersection',
         vectorize_op=False, datasets_are_pre_aligned=True)
 
-    out_dir = os.path.dirname(r_sum_avail_uri)
-    r_sum_avail_pour_uri = os.path.join(out_dir, 'r_sum_avail_pour.tif')
-
+    LOGGER.info('calculating r_sum_avail_pour')
     seasonal_water_yield_core.calculate_r_sum_avail_pour(
-        r_sum_avail_uri, flow_dir_uri, r_sum_avail_pour_uri)
-
-    sf_uri = os.path.join(out_dir, 'sf.tif')
-    sf_down_uri = os.path.join(out_dir, 'sf_down.tif')
-
-    outflow_weights_uri = os.path.join(out_dir, 'outflow_weights.tif')
-    outflow_direction_uri = os.path.join(out_dir, 'outflow_direction.tif')
-
-    LOGGER.info('calculating flow weights')
-    seasonal_water_yield_core.calculate_flow_weights(
-        flow_dir_uri, outflow_weights_uri, outflow_direction_uri)
+        r_sum_avail_uri, outflow_weights_uri, outflow_direction_uri,
+        r_sum_avail_pour_uri)
 
     LOGGER.info('calculating slow flow')
     seasonal_water_yield_core.route_sf(
