@@ -4,6 +4,7 @@ import logging
 import os
 import collections
 import sys
+import gc
 
 import numpy
 cimport numpy
@@ -37,8 +38,8 @@ cdef int N_MONTHS = 12
 
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double INF = numpy.inf
-cdef int N_BLOCK_ROWS = 6
-cdef int N_BLOCK_COLS = 6
+cdef int N_BLOCK_ROWS = 8
+cdef int N_BLOCK_COLS = 8
 
 cdef class BlockCache:
     cdef numpy.int32_t[:,:] row_tag_cache
@@ -92,7 +93,11 @@ cdef class BlockCache:
                     'make the runtime slow for other algorithms. %s',
                     band.GetDescription())
 
-
+    def __dealloc__(self):
+        LOGGER.debug('deallocating')
+        self.band_list[:] = []
+        self.block_list[:] = []
+        self.update_list[:] = []
 
     #@cython.boundscheck(False)
     @cython.wraparound(False)
@@ -2682,9 +2687,6 @@ def resolve_flats(
 
     LOGGER.info('labeling flats')
     label_flats(dem_uri, low_edges, labels_uri)
-
-    #LOGGER.info('cleaning high edges')
-    #clean_high_edges(labels_uri, high_edges)
 
     drain_flats(
         high_edges, low_edges, labels_uri, flow_direction_uri, flat_mask_uri)
