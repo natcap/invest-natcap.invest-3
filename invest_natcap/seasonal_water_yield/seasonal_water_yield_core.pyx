@@ -94,7 +94,6 @@ cdef class BlockCache:
                     band.GetDescription())
 
     def __dealloc__(self):
-        LOGGER.debug('deallocating')
         self.band_list[:] = []
         self.block_list[:] = []
         self.update_list[:] = []
