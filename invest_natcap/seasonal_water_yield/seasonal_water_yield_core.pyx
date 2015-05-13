@@ -2693,24 +2693,14 @@ def resolve_flats(
 
 
 def calculate_recharge(
-    precip_uri_list, et0_uri_list, flow_dir_uri, outflow_weights_uri,
+    precip_uri_list, et0_uri_list, qfi_uri_list, flow_dir_uri, outflow_weights_uri,
     outflow_direction_uri, dem_uri, lulc_uri, kc_lookup, alpha_m, beta_i, gamma,
     stream_uri, recharge_uri, recharge_avail_uri, r_sum_avail_uri,
-    aet_uri):
+    aet_uri, kc_uri):
 
     cdef deque[int] outlet_cell_deque
-
     find_outlets(
         dem_uri, flow_dir_uri, outlet_cell_deque)
-    out_dir = os.path.dirname(recharge_uri)
-    kc_uri = os.path.join(out_dir, 'kc.tif')
-    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        lulc_uri, kc_lookup, kc_uri, gdal.GDT_Float32, -1)
-
-    qfi_uri_list = []
-    for index in xrange(N_MONTHS):
-        qfi_uri_list.append(os.path.join(out_dir, 'qf_%d.tif' % (index+1)))
-
     route_recharge(
         precip_uri_list, et0_uri_list, kc_uri, recharge_uri, recharge_avail_uri,
         r_sum_avail_uri, aet_uri, alpha_m, beta_i, gamma, qfi_uri_list,

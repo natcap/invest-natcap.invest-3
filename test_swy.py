@@ -22,6 +22,7 @@ args = {
         u'rain_events_table_uri': u'C:/Users/rich/Documents/Dropbox/SeasonalWaterYield/input/Number of events.csv',
         u'threshold_flow_accumulation': u'200',
         u'workspace_dir': u'C:\\Users\\rich/Documents/delete_swy',
+        u'results_suffix': u'',
 }
 
 def md5_for_filename(filename, block_size=2**20):
