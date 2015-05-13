@@ -2710,8 +2710,8 @@ def calculate_recharge(
 
 
 def calculate_r_sum_avail_pour(
-    r_sum_avail_uri, outflow_weights_uri,
-    outflow_direction_uri, r_sum_avail_pour_uri):
+        r_sum_avail_uri, outflow_weights_uri, outflow_direction_uri,
+        r_sum_avail_pour_uri):
     """Calculate how r_sum_avail r_sum_avail_pours directly into its neighbors"""
 
     out_dir = os.path.dirname(r_sum_avail_uri)
@@ -2841,6 +2841,7 @@ def calculate_r_sum_avail_pour(
                     r_sum_avail_pour_block[row_index, col_index, row_block_offset, col_block_offset] = r_sum_avail_pour_sum
                     cache_dirty[row_index, col_index] = 1
     block_cache.flush_cache()
+
 
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -3132,7 +3133,7 @@ def route_sf(
                             sf_down_frac = outflow_weight * r_sum_avail / neighbor_r_sum_avail_pour
                             if sf_down_frac > 1.0:
                                 sf_down_frac = 1.0
-                            sf_down_sum +=  (neighbor_sf_down - neighbor_sf) * sf_down_frac
+                            sf_down_sum +=  outflow_weight * (neighbor_sf_down - neighbor_sf) * sf_down_frac
                             if sf_down_sum < 0:
                                 pass#LOGGER.error(sf_down_sum)
 
