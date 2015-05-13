@@ -145,6 +145,7 @@ def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
             compression = 'gzip', fillvalue = nodata, \
             dtype = 'i4')
 
+
     limits_group = transect_data_file.create_group('limits')
 
     indices_limit_dataset = \
@@ -164,6 +165,20 @@ def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
             (transect_count, 4), \
             compression = 'gzip', fillvalue = nodata)
 
+
+    fetch_group = transect_data_file.create_group('fetch')
+
+    fetch_distances_dataset = \
+        fetch_group.create_dataset('distances', \
+            (transect_count, 16), \
+            compression = 'gzip', fillvalue = nodata)
+
+    fetch_depths_dataset = \
+        fetch_group.create_dataset('depths', \
+            (transect_count, 16), \
+            compression = 'gzip', fillvalue = nodata)
+
+
     return  [habitat_type_dataset, \
             habitat_properties_dataset, \
             soil_type_dataset, \
@@ -177,6 +192,8 @@ def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
             indices_limit_dataset, \
             coordinates_limits_dataset, \
             xy_coordinates_limits_dataset, \
+            fetch_distances_dataset, \
+            fetch_depths_dataset, \
             transect_data_file]
 
 
@@ -611,8 +628,6 @@ def compute_transects(args):
                         if clipped_transect is None:
                             continue
                        
-#                        print('initial shore', clipped_transect[shore-2:shore+3])
-
                         positions_tiff = ( \
                             raw_positions[0][start:end], \
                             raw_positions[1][start:end])
@@ -646,9 +661,6 @@ def compute_transects(args):
                             smooth_transect(interpolated_depths_tiff, \
                                 args['smoothing_percentage'])
 
-#                        print('smoothed shore', \
-#                            smoothed_depths_tiff[shore-2:shore+3])
-
                         smoothed_depths_hdf5 = \
                             smooth_transect(interpolated_depths_hdf5, \
                                 args['smoothing_percentage'])
@@ -661,9 +673,6 @@ def compute_transects(args):
                         start_hdf5 = int(start * stretch_coeff)
                         end_hdf5 = int(smoothed_depths_hdf5.size + start_hdf5)
                         shore_hdf5 = int(shore * stretch_coeff)
-
-#                        print('tiff, hdf5', (start, shore, end), \
-#                            (start_hdf5, shore_hdf5, end_hdf5)) 
 
                         # Closest point to zero
                         almost_zero = np.argmin(abs(smoothed_depths_hdf5[ \
@@ -685,10 +694,6 @@ def compute_transects(args):
                         profile_length_hdf5_m = \
                             profile_length_hdf5 * hdf5_cell_size
 
-#                        print('profile_length_tiff_m', profile_length_tiff_m)
-#                        print('profile_length_hdf5_m', profile_length_hdf5_m)
-#                        print('tiff, hdf5', (start, end), (start_hdf5, end_hdf5))
-
                         if profile_length_tiff_m < args['min_profile_length']:
                             continue
                         if profile_length_hdf5_m < args['min_profile_length']:
@@ -699,10 +704,6 @@ def compute_transects(args):
                         offshore_length_tiff = end - shore
                         offshore_length_hdf5 = end_hdf5 - shore_hdf5
 
-#                        print('offshore_length_tiff', offshore_length_tiff)
-#                        print(smoothed_depths_tiff[shore-5:shore+6])
-#                        print('offshore_length_hdf5', offshore_length_hdf5)
-#                        print(smoothed_depths_hdf5[shore_hdf5-5:shore_hdf5+6])
 
                         offshore_length_tiff_m = offshore_length_tiff * i_input_cell_size
                         offshore_length_hdf5_m = \
@@ -725,13 +726,6 @@ def compute_transects(args):
                         
 
                         if average_depth_tiff > args['min_profile_depth']:
-                            #print('Offshore tiff profile too shallow:')
-                            #print('offshore_length_tiff', offshore_length_tiff)
-                            #print('offshore_length_tiff_m', offshore_length_tiff_m)
-                            #print('np.sum(smoothed_depths_tiff[shore:end])', \
-                            #    np.sum(smoothed_depths_tiff[shore:end]))
-                            #print('average_depth_tiff', average_depth_tiff)
-                            #print('average_depth_hdf5', average_depth_hdf5)
                             continue
                         # At this point, the transect is valid: 
                         else:
@@ -749,12 +743,9 @@ def compute_transects(args):
                            
                             tiles += 1
 
-
                         transects_so_far += 1
 
                         if average_depth_hdf5 > args['min_profile_depth']:
-#                            print('Offshore hdf5 profile too shallow:')
-#                            print(average_depth_hdf5, '<', args['min_profile_depth'])
                             continue
                         # At this point, the transect is valid: 
                         else:
@@ -770,21 +761,10 @@ def compute_transects(args):
                             if (end_hdf5 - start_hdf5) > max_transect_length_hdf5:
                                 max_transect_length_hdf5 = end_hdf5 - start_hdf5
                            
-#                            tiles += 1
-
                             # Found valid transect, break out of the loop
                             break
     print('')
 
-    # Cleanup
-    bathymetry = None
-    landmass = None
-    aoi_band = None
-    aoi_raster = None
-    bathymetry_band = None
-    bathymetry_raster = None
-    landmass_band = None
-    landmass_raster = None
 
     tiles = len(transect_info_hdf5)
 
@@ -822,6 +802,8 @@ def compute_transects(args):
     indices_limit_dataset_hdf5, \
     coordinates_limits_dataset, \
     xy_coordinates_limits_dataset_hdf5, \
+    fetch_distances_dataset_hdf5, \
+    fetch_depths_dataset_hdf5, \
     transect_data_file_hdf5 = create_HDF5_datasets( \
         args['transect_data_uri'], \
         tiles, \
@@ -848,6 +830,8 @@ def compute_transects(args):
     indices_limit_dataset_tiff, \
     coordinates_limits_dataset_tiff, \
     xy_coordinates_limits_dataset_tiff, \
+    fetch_distances_dataset_tiff, \
+    fetch_depths_dataset_tiff, \
     transect_data_file_tiff = create_HDF5_datasets( \
         tiff_transect_data_uri, \
         tiles, \
@@ -859,17 +843,111 @@ def compute_transects(args):
         habitat_nodata)
 
 
+    #Todo: Remove this by using datasets directly instead of transect_info_tiff
+    dataset = gdal.Open(args['bathymetry_raster_uri'])
+    gt = dataset.GetGeoTransform()
+    dataset = None
+    
+    # This loop computes fetch for each transect
+    LOGGER.debug('Computing fetch...')
+
+    rays_per_sector = 1
+    d_max = 50000 # 50km
+    cell_size = args['bathy_cell_size']
+    
+    shore_points_row = []
+    shore_points_col = []
+    
+    # Build the list of transect origin coords in the order of transect IDs
+    for transect in range(len(transect_info_tiff)):
+
+        shore = transect_info_tiff[transect]['clip_limits'][1]
+
+#        print 'transect', transect, 'shore', shore,
+
+        # If the shore point is inland, look for the first position offshore
+        if landmass[( \
+            transect_info_tiff[transect]['raw_positions'][0][shore], \
+            transect_info_tiff[transect]['raw_positions'][1][shore])]:
+            
+#            print 'Inland',
+
+            end = transect_info_tiff[transect]['clip_limits'][2]
+            
+            # Move seaward until we find some negative depth
+            index = end
+            for index in range(shore+1, end):
+                if not landmass[( \
+                    transect_info_tiff[transect]['raw_positions'][0][index], \
+                    transect_info_tiff[transect]['raw_positions'][1][index])]:
+                    break
+
+            # Should always find a negative shore index 
+            assert index < end -1
+
+
+        # Shore point is in the ocean, look for the shore
+        else:
+
+#            print 'In the ocean',
+
+            start = transect_info_tiff[transect]['clip_limits'][0]
+
+            # Move landward until we find some negative depth
+            index = start
+            for index in range(start, end):
+                if not landmass[( \
+                    transect_info_tiff[transect]['raw_positions'][0][index], \
+                    transect_info_tiff[transect]['raw_positions'][1][index])]:
+                    break
+
+        # Found the first shore point in the ocean: add it
+        shore_points_row.append( \
+            transect_info_tiff[transect]['raw_positions'][0][index])
+        shore_points_col.append( \
+            transect_info_tiff[transect]['raw_positions'][1][index])
+
+#        print 'index', index
+
+    shore_points = (np.array(shore_points_row), np.array(shore_points_col))    
+
+    bathymetry_nodata = \
+        pygeoprocessing.geoprocessing.get_nodata_from_uri( \
+            args['bathymetry_raster_uri'])
+
+    # Compute fetch, which will return fetch information in the same order
+    # as the incoming shore points order
+    fetch_data = compute_fetch(landmass, rays_per_sector, d_max, cell_size, \
+        shore_points, bathymetry, bathymetry_nodata, gt)
+    
+    for transect in range(len(fetch_data[0])):
+        fetch_distances_dataset_tiff[transect, ...] = \
+            fetch_data[0][transect][...]
+        fetch_depths_dataset_tiff[transect, ...] = \
+            fetch_data[1][transect][...]
+        fetch_distances_dataset_hdf5[transect, ...] = \
+            fetch_data[0][transect][...]
+        fetch_depths_dataset_hdf5[transect, ...] = \
+            fetch_data[1][transect][...]
+
+
+    # Cleanup
+    bathymetry = None
+    landmass = None
+    aoi_band = None
+    aoi_raster = None
+    bathymetry_band = None
+    bathymetry_raster = None
+    landmass_band = None
+    landmass_raster = None
+
+
+#    sys.exit(0)
     # TODO: Break this up so we don't use so much memory
     # On a second thought, this might be the best option: the model
     # can run optimally with enough memory, or use the HD otherwise...
 #    LOGGER.debug('Storing transect_info_tiff data')
 
-    #Todo: Remove this by using datasets directly instead of transect_info_tiff
-    dataset = gdal.Open(args['bathymetry_raster_uri'])
-    
-    gt = dataset.GetGeoTransform()
-    dataset = None
-    
     # This loop saves 1m resolution data for nearshore wave and erosion
     for transect in range(len(transect_info_hdf5)):
         (start_hdf5, shore_hdf5, end_hdf5) = \
@@ -965,11 +1043,15 @@ def compute_transects(args):
         xy_coordinates_limits_dataset_tiff[transect] = \
             [J[start_tiff], I[start_tiff], J[end_tiff-1], I[end_tiff-1]]
 
+
+
+    # Don't need transect_info, cleaning up...
+    for transect in range(len(transect_info_tiff)):
         transect_info_tiff[transect] = None
 
 
     # Going through the bathymetry raster tile-by-tile.
-    LOGGER.debug('Saving transect data...')
+    LOGGER.debug('Saving shore data points...')
     single_value = np.array([[0]])
 
 
@@ -1011,7 +1093,7 @@ def compute_transects(args):
 
     # Saving transects
     habitat_type_dataset_tiff = transect_data_file_tiff['habitat_type']
-    LOGGER.debug('Writing data to raster %s' % habitat_type_dataset_tiff)
+    LOGGER.debug('Writing data to raster %s' % tiff_transect_data_uri)
     progress_step = max(tiles / 39, 1)
     for transect in range(tiles):
         if transect % progress_step == 0:
@@ -1076,6 +1158,304 @@ def compute_transects(args):
 
     return args['transect_data_uri']
     
+
+def fetch_vectors(angles):
+    """convert the angles passed as arguments to raster vector directions.
+    
+        Input:
+            -angles: list of angles in radians
+            
+        Outputs:
+            -directions: vector directions numpy array of size (len(angles), 2)
+    """
+    # Raster convention: Up is north, i.e. decreasing 'i' is towards north.
+    # Wind convention: Wind is defined as blowing FROM and not TOWARDS. This
+    #                  means that fetch rays are going where the winds are
+    #                  blowing from:
+    # top angle: cartesian convention (x axis: J, y axis: negative I)
+    # parentheses: (oceanographic   
+    #               convention)    Angle   direction   ray's I  ray's J
+    #                                                  coord.   coord. 
+    #              90                  0      north       -1        0
+    #             (90)                90       east        0        1
+    #               |                180      south        1        0
+    #               |                270       west        0       -1
+    #     0         |         180 
+    #   (180)-------+-------->(0)  Cartesian to oceanographic
+    #               |              angle transformation: a' = 180 - a  
+    #               |              
+    #               |              so that: [x, y] -> [I, J]
+    #              270  
+    #             (270)
+    #            
+    directions = np.empty((len(angles), 2))
+
+    for a in range(len(angles)):
+        pi = math.pi
+        directions[a] = (round(math.cos(pi - angles[a]), 10),\
+            round(math.sin(pi - angles[a]), 10))
+    return directions
+
+def cast_ray_fast(direction, d_max):
+    """ March from the origin towards a direction until either land or a
+    maximum distance is met.
+    
+        Inputs:
+        - origin: algorithm's starting point -- has to be on sea
+        - direction: marching direction
+        - d_max: maximum distance to traverse
+        - raster: land mass raster
+        
+        Returns the distance to the origin."""
+    # Rescale the stepping vector so that its largest coordinate is 1
+    unit_step = direction / np.fabs(direction).max()
+    # Compute the length of the normalized vector
+    unit_step_length = np.sqrt(np.sum(unit_step**2))
+    # Compute the number of steps to take
+    # Use ceiling to make sure to include any cell that is within the range of
+    # max_fetch
+    step_count = int(math.ceil(d_max / unit_step_length))
+    I = np.array([i*unit_step[0] for i in range(step_count+1)])
+    J = np.array([j*unit_step[1] for j in range(step_count+1)])
+
+    return ((I, J), unit_step_length)
+   
+def rowcol_to_xy(rows, cols, gt):
+    """non-uri version of rowcol_to_xy_uri"""
+    X = gt[0] + cols * gt[1] + rows * gt[2]
+    Y = gt[3] + cols * gt[4] + rows * gt[5]
+    
+    return (X, Y)
+
+# TODO: Add docstring to this function
+def compute_fetch(land_array, rays_per_sector, d_max, cell_size, \
+    shore_points, bathymetry, bathymetry_nodata, GT):
+    """ Given a land raster, return the fetch distance from a point
+    in given directions 
+        
+        - land_raster: raster where land is encoded as 1s, sea as 0s,
+            and cells outside the area of interest as anything 
+            different from 0s or 1s.
+        - rays_per_sector: Number of rays in each of the 16 sectors.
+        - d_max: maximum distance in meters over which to compute the fetch
+        - cell_size: size of a cell in meters
+        - shore_points: shore point coordinates as returned by numpy.where.
+        - bathymetry: elevation matrix as returned by raster.ReadAsArray
+        - bathymetry_nodata: bathymetry raster's nodata value
+        - GT: bathymetry's geotransform.
+        
+        returns: a tuple (distances, depths) where:
+            distances is a dictionary of fetch data where the key is a shore
+            point (tuple of integer coordinates), and the value is a 1*sectors 
+            numpy array containing fetch distances (float) from that point for
+            each sector. The first sector (0) points eastward."""
+    # precompute directions
+    direction_count = 16 * rays_per_sector
+    direction_range = range(direction_count)
+    direction_step = 2.0 * math.pi / direction_count
+    directions_rad = [a * direction_step for a in direction_range]
+    direction_vectors = fetch_vectors(directions_rad)
+    unit_step_length = np.empty(direction_vectors.shape[0])
+    # Perform a bunch of tests to ensure the assumptions in the fetch algorithm
+    # are valid
+    # Check that bathy and landmass rasters are size-compatible
+    #print('land_shape', land_array.shape)
+    #print('bathy_shape', bathymetry.shape)
+    #print('i_max, j_max', np.amax(shore_points[0]), np.amax(shore_points[1]))
+    #print('shore points', shore_points[0].size)
+    message = 'landmass and bathymetry rasters are not the same size:' + \
+    str(land_array.shape) + ' and ' + str(bathymetry.shape) + ' respectively.'
+    assert land_array.shape == bathymetry.shape, message
+    # Used to test if point fall within both land and bathy raster size limits
+    (i_count, j_count) = land_array.shape
+    # Check that shore points fall within the land raster limits
+    message = 'some shore points fall outside the land raster'
+    assert (np.amax(shore_points[0]) < i_count) and \
+        (np.amax(shore_points[1]) < j_count), message
+    # Check that shore points don't fall on nodata
+    shore_points_on_nodata = np.where(land_array[shore_points] < 0.)[0].size
+    message = 'There are ' + str(shore_points_on_nodata) + '/' + \
+    str(shore_points[0].size) + \
+    ' shore points on nodata areas in the land raster. There should be none.'
+    assert shore_points_on_nodata == 0, message
+    # Check that shore points don't fall on land
+    shore_points_on_land = np.where(land_array[shore_points] > 0)[0].size
+
+    if shore_points_on_land:
+        LOGGER.warning('Skipping the %i shore points that are on land' \
+            % shore_points_on_land) 
+
+    # Compute the ray paths in each direction to their full length (d_max).
+    # We'll clip them for each point in two steps (raster boundaries & land)
+    # The points returned by the cast function are relative to the origin (0,0)
+    ray_path = {}
+    valid_depths = 0 # used to determine if there are non-nodata depths
+    for d in direction_range:
+        result = \
+        cast_ray_fast(direction_vectors[d], d_max/cell_size)
+        ray_path[directions_rad[d]] = result[0]
+        unit_step_length[d] = result[1]
+    # For each point, we use the rays in ray_path, and clip them in 2 steps:
+    # 1)- clip the ray paths that go beyond the raster boundaries
+    # 2)- If a ray passes over a landmass, remove that section till the end
+    # All this computation has to be done on a per-point basis.
+    point_list = np.array(zip(shore_points[0], shore_points[1]))
+
+    x_points = shore_points[1] * GT[1] + GT[0] + shore_points[0] * GT[2]
+    y_points = shore_points[1] * GT[4] + GT[3] + shore_points[0] * GT[5]
+
+    x_points, y_points = \
+    rowcol_to_xy(shore_points[0], shore_points[1], GT)
+
+    key_list = np.array(zip(x_points, y_points))
+
+    # Computing fetch for each point
+    distance = []
+    avg_depth = []
+    positive_depth_points = 0
+    point_count = point_list.shape[0]
+
+    progress_step = max(point_count / 39, 1)
+    for p in range(point_count):
+        if p % progress_step == 0:
+            print '.',
+        point = point_list[p]
+
+        distance.append(np.ones(direction_count) * 0.0)
+        avg_depth.append(np.ones(direction_count) * -20000)
+
+        # If point on land, skip it
+        assert not land_array[(point[0], point[1])]
+
+        # Else, compute fetch    
+
+        # Computing fetch for each direction 
+        for d in range(direction_count):
+            direction = directions_rad[d]
+            # Anchor the ray path to the current point
+            I = ray_path[direction][0]+point[0]
+            J = ray_path[direction][1]+point[1]
+            # We need integer indices to index arrays: round I and J
+            I = np.around(I).astype(int)
+            J = np.around(J).astype(int)
+            # Find valid indices for I and J separately
+            valid_i = np.where((I>=0) & (I<i_count))
+            valid_j = np.where((J>=0) & (J<j_count))
+            # Find points for which both I and J are valid
+            valid_i_and_j = set(valid_i[0]) & set(valid_j[0])
+            # Put the indices back into a tuple as if it came from np.where()
+            valid_i_and_j = (np.array([pt for pt in valid_i_and_j]),)
+            # Isolate indices from points within the raster
+            I = I[valid_i_and_j]
+            J = J[valid_i_and_j]
+            # At this point, all indices are within bounds
+            # Extract only those ray indices that are not over land
+            sea_indices = np.where(land_array[(I, J)] < 1)[0]
+            # If not all indices over water -> keep first section over water
+            if sea_indices[-1] != len(sea_indices) - 1:
+                # Find the index after the first section over water:
+                # Since ray indices over land don't show up in sea_indices, do
+                # 1- Subtract each index from its predecessor (D_i=i_n - i_n-1)
+                # 2- Continuous indices over water have a D_i == 1, otherwise
+                #   the indices are separated by land (D_i > 1). We extract 
+                #   all indices that have a discontinuity, I=np.where(D_i > 1)
+                non_consecutive = \
+                    np.where(sea_indices[1:] - sea_indices[0:-1] > 1)[0]
+                # 3- The index at I[0] is the end of the ray we want to keep
+                #   (before the first time the ray hits land). We use I[0]+1
+                #   for slicing ray.
+                sea_indices = (sea_indices[:non_consecutive[0]+1],)
+            # At this point, the ray stops before the first landmass
+            # We use sea_indices to extract the accurate portion of the ray to
+            # compute the distance
+            I = I[sea_indices]
+            J = J[sea_indices]
+            # We now compute the distance traversed by the ray, which we almost
+            # have already: we know the length of the ray when moving 1 cell 
+            # (by taking 1 step). The number of steps to get the ray is the
+            # biggest of its coordinates:
+            step_count = max(math.fabs(I[-1]-I[0]), math.fabs(J[-1]-J[0]))
+            D = step_count * unit_step_length[d]
+            # We want to return the maximum fetch distance: it's max_fetch if
+            # the ray is not stopped by land before, else it's the maximum
+            # distance the ray traversed over water. D is not this maximum
+            # length: the marching algorithm makes 1 pixel jumps in either the
+            # x or y direction starting at the center of the first pixel. So,
+            # 1/2 of the last pixel is not accounted for in D. We have to take
+            # this into account.
+            to_last_pixel_edge = unit_step_length[d] / 2.
+            # Fetch distance is distance from pixel center to edge of water
+            distance[p][d] = min(d_max, (D+to_last_pixel_edge)*cell_size)
+            # reset invalid depth values from segments outside the bathymetry
+            # layer
+            depths = bathymetry[(I, J)]
+            #print(bathymetry_nodata, depths.shape, depths)
+
+            if depths[0] == bathymetry_nodata:
+                print('bathymetry_nodata', bathymetry_nodata, 'depths', depths)
+                average_depth = np.array([-100.0])
+            # Valid depths, compute the average
+            else:
+                # Remove nodata from depth values
+                valid_data = np.where(depths != bathymetry_nodata)
+                if valid_data[0].size > 0:
+                    depths = depths[valid_data]
+                else:
+                    print('Warning: point',point,'surrounded by nodata depths')
+                # Remove positive values
+                negative = np.where(depths <= 0.)[0]
+                if negative.size > 0:
+                    depths = depths[negative]
+                # If depths are all positive, set to zero
+                else:
+                    depths = np.array([0.])
+                # Average depth is mean bathymetry along the ray
+                average_depth = np.average(depths)
+                # Testing for Inf or NaN
+                message = 'Detected NaN in average_depth.' + \
+                    ' individual depths ' + str(depths) + \
+                    ', valid depth indices: ' + str(negative)
+                assert not np.isnan(average_depth), message
+                message = 'Detected Inf in average_depth.' + \
+                    ' individual depths ' + str(depths) + \
+                    ', valid depth indices: ' + str(negative) + \
+                    ', valid - no_data: ' + str(negative-bathymetry_nodata)
+                assert not np.isinf(average_depth), message
+                    
+            message = 'depth == nodata (' + str(bathymetry_nodata) + \
+            '). bathymetry = ' + str(depths)
+            assert average_depth != bathymetry_nodata, message
+            avg_depth[p][d] = average_depth
+
+        # We have the distances for all the directions, now we combine them
+        # Shift the arrays so that each sector has an equal number of rays on 
+        # each side of its center
+        distance[p] = np.roll(distance[p], (rays_per_sector / 2))
+        avg_depth[p] = np.roll(avg_depth[p], (rays_per_sector / 2))
+        # Reshape the fetch arrays so that a row corresponds to a sector
+        distance[p] = \
+            np.reshape(distance[p], (16, rays_per_sector))
+        avg_depth[p] = \
+            np.reshape(avg_depth[p], (16, rays_per_sector))
+        # Compute the weights by taking the cos of the appropriately shifted 
+        # angles
+        angles = np.array(directions_rad[:rays_per_sector])
+        angles -= directions_rad[rays_per_sector / 2]
+        cos = np.cos(angles)
+        # Take the weighted rows average column-wise
+        distance[p] = \
+            np.minimum(np.average(distance[p] * cos, axis = 1), d_max)
+        avg_depth[p] = np.average(avg_depth[p], axis = 1)
+        pos_depth = np.where(avg_depth[p] >= 0)
+        positive_depth_points += pos_depth[0].size
+
+        # Set positive depths to zero
+        if pos_depth[0].size:
+            avg_depth[p][pos_depth] = 0
+    print ' '
+
+    return (distance, avg_depth)
+
 
 def export_transect_coordinates_to_CSV(transect_data_uri):
     """Extract transect coordinates to a CSV
