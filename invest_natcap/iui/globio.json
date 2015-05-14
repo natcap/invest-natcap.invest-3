@@ -67,6 +67,19 @@
           }
         },
         {
+          "id": "lulc_to_globio_table_uri",
+          "args_id": "lulc_to_globio_table_uri",
+          "type": "file",
+          "label": "Landcover to GLOBIO Landcover Table (CSV)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": ["lucode", "globio_lucode"]
+          },
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
+        },
+        {
           "id": "infrastructure_dir",
           "args_id": "infrastructure_dir",
           "type": "folder",

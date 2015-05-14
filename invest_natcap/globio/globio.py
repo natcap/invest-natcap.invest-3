@@ -19,6 +19,22 @@ def execute(args):
 
     pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
 
+    #reclassify the landcover map
+    lulc_to_globio_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
+        args['lulc_to_globio_table_uri'], 'lucode')
+
+    lulc_to_globio = dict(
+        [(lulc_code, int(table['globio_lucode'])) for
+         (lulc_code, table) in lulc_to_globio_table.items()])
+
+    globio_lulc_uri = os.path.join(
+        args['workspace_dir'], 'globio_lulc%s.tif' % file_suffix)
+    globio_nodata = -1
+    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        args['lulc_uri'], lulc_to_globio, globio_lulc_uri, gdal.GDT_Int32,
+        globio_nodata, exception_flag='values_required')
+
+
     #load the infrastructure layers from disk
     infrastructure_filenames = []
     infrastructure_nodata_list = []
@@ -67,7 +83,7 @@ def execute(args):
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
 
-    #infrasturcutre_filenames
+
 
 
     #align and clip all the layers?  is there an AOI?
