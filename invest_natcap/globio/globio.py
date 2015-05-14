@@ -284,7 +284,50 @@ def execute(args):
         assert_datasets_projected=False, vectorize_op=False)
 
     #calc_msa_i
+    infrastructure_impact_zones = {
+        'no impact': 1.0,
+        'low impact': 0.9,
+        'medium impact': 0.8,
+        'high impact': 0.4
+    }
 
+    def msa_i_op(lulc_array, distance_to_infrastructure):
+        """calculate msa infrastructure"""
+        msa_i_tropical_forest = numpy.empty(lulc_array.shape)
+        distance_to_infrastructure *= out_pixel_size #convert to meters
+        msa_i_tropical_forest[:] = infrastructure_impact_zones['no impact']
+        msa_i_tropical_forest[(distance_to_infrastructure > 4000.0) & (distance_to_infrastructure <= 14000.0)] = infrastructure_impact_zones['low impact']
+        msa_i_tropical_forest[(distance_to_infrastructure > 1000.0) & (distance_to_infrastructure <= 4000.0)] = infrastructure_impact_zones['medium impact']
+        msa_i_tropical_forest[(distance_to_infrastructure <= 1000.0)] = infrastructure_impact_zones['high impact']
+
+        msa_i_temperate_and_boreal_forest = numpy.empty(lulc_array.shape)
+        msa_i_temperate_and_boreal_forest[:] = infrastructure_impact_zones['no impact']
+        msa_i_temperate_and_boreal_forest[(distance_to_infrastructure > 1200.0) & (distance_to_infrastructure <= 4200.0)] = infrastructure_impact_zones['low impact']
+        msa_i_temperate_and_boreal_forest[(distance_to_infrastructure > 300.0) & (distance_to_infrastructure <= 1200.0)] = infrastructure_impact_zones['medium impact']
+        msa_i_temperate_and_boreal_forest[(distance_to_infrastructure <= 300.0)] = infrastructure_impact_zones['high impact']
+
+        msa_i_cropland_and_grassland = numpy.empty(lulc_array.shape)
+        msa_i_cropland_and_grassland[:] = infrastructure_impact_zones['no impact']
+        msa_i_cropland_and_grassland[(distance_to_infrastructure > 2000.0) & (distance_to_infrastructure <= 7000.0)] = infrastructure_impact_zones['low impact']
+        msa_i_cropland_and_grassland[(distance_to_infrastructure > 500.0) & (distance_to_infrastructure <= 2000.0)] = infrastructure_impact_zones['medium impact']
+        msa_i_cropland_and_grassland[(distance_to_infrastructure <= 500.0)] = infrastructure_impact_zones['high impact']
+
+        msa_i = numpy.where((lulc_array >= 1) & (lulc_array <= 5), msa_i_temperate_and_boreal_forest, infrastructure_impact_zones['no impact'])
+        msa_i = numpy.where((lulc_array >= 6) & (lulc_array <= 12), msa_i_cropland_and_grassland, msa_i)
+
+        return msa_i
+
+    LOGGER.info('calculate msa_i')
+    distance_to_infrastructure_uri = os.path.join(
+        args['workspace_dir'], 'distance_to_infrastructure%s.tif' % file_suffix)
+    pygeoprocessing.geoprocessing.distance_transform_edt(
+        infrastructure_uri, distance_to_infrastructure_uri)
+    msa_i_uri = os.path.join(args['workspace_dir'], 'msa_i%s.tif' % file_suffix)
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [globio_lulc_uri, distance_to_infrastructure_uri], msa_i_op, msa_i_uri,
+        gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, assert_datasets_projected=False,
+        vectorize_op=False)
 
 
     #calc_msa_lu
@@ -308,8 +351,18 @@ def execute(args):
         globio_lulc_uri, lu_msa_lookup, msa_lu_uri,
         gdal.GDT_Float32, globio_nodata, exception_flag='values_required')
 
+    LOGGER.info('calculate msa')
+    msa_uri = os.path.join(
+        args['workspace_dir'], 'msa%s.tif' % file_suffix)
+    def msa_op(msa_f, msa_lu, msa_i):
+        return numpy.where(
+            msa_f != globio_nodata, msa_f* msa_lu * msa_i, globio_nodata)
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [msa_f_uri, msa_lu_uri, msa_i_uri], msa_op, msa_uri,
+        gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, assert_datasets_projected=False,
+        vectorize_op=False)
     #calc msa msa = msa_f[tail_type] * msa_lu[tail_type] * msa_i[tail_type]
-
 
 
 
