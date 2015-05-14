@@ -253,6 +253,30 @@ def execute(args):
 
 
     #calc_msa_f
+    msa_nodata = -1
+    def msa_f_op(ffqi):
+        """calcualte msa fragmentation"""
+        nodata_mask = natural_areas_nodata == ffqi
+
+        msa_f = numpy.empty(ffqi.shape)
+        msa_f[:] = 1.0
+        #These thresholds come from FFQI from Justin's code; I don't
+        #know where they otherwise came from.
+        msa_f[(ffqi > .9825) & (ffqi <= .9984)] = 0.95
+        msa_f[(ffqi > .89771) & (ffqi <= .9825)] = 0.90
+        msa_f[(ffqi > .578512) & (ffqi <= .89771)] = 0.7
+        msa_f[(ffqi > .42877) & (ffqi <= .578512)] = 0.6
+        msa_f[(ffqi <= .42877)] = 0.3
+        msa_f[nodata_mask] = msa_nodata
+
+        return msa_f
+
+    msa_f_uri = os.path.join(args['workspace_dir'], 'msa_f%s.tif' % file_suffix)
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [ffqi_uri], msa_f_op, msa_f_uri, gdal.GDT_Float32, msa_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        assert_datasets_projected=False, vectorize_op=False)
+
 
     #calc_msa_i
 
