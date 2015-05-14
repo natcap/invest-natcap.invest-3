@@ -1,11 +1,17 @@
 """GLOBIO InVEST Model"""
 
 import os
+import logging
 
 import gdal
 import osr
 import numpy
 import pygeoprocessing
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('invest_natcap.globio.globio')
 
 def execute(args):
     """main execute entry point"""
@@ -58,12 +64,14 @@ def execute(args):
             (lulc_array == 130) | (lulc_array == 1))
         return numpy.where(nodata_mask, natural_areas_nodata, result)
 
+    LOGGER.info("create mask of natural areas")
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [intermediate_globio_lulc_uri], natural_area_mask_op,
         natural_areas_uri, gdal.GDT_Int32, natural_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
 
+    LOGGER.info('gaussian filter natural areas')
     sigma = 9.0
     gaussian_kernel_uri = os.path.join(
         args['workspace_dir'], 'gaussian_kernel%s.tif' % file_suffix)
@@ -83,6 +91,7 @@ def execute(args):
             natural_areas_array * smoothed_natural_areas,
             natural_areas_nodata)
 
+    LOGGER.info('calculate ffqi')
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [natural_areas_uri, smoothed_natural_areas_uri], ffqi_op,
         ffqi_uri, gdal.GDT_Int32, natural_areas_nodata,
@@ -152,6 +161,7 @@ def execute(args):
 
         return numpy.where(nodata_mask, globio_nodata, globio_lulc)
 
+    LOGGER.info('create the globio lulc')
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [intermediate_globio_lulc_uri, sum_yieldgap_uri,
          potential_vegetation_uri, pasture_uri, ffqi_uri], create_globio_lulc,
@@ -240,17 +250,12 @@ def execute(args):
         return numpy.where(
             nodata_mask, infrastructure_nodata, infrastructure_result)
 
+    LOGGER.info('collapse infrastructure into one raster')
     pygeoprocessing.geoprocessing.vectorize_datasets(
         infrastructure_filenames, collapse_infrastructure_op,
         infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
-
-
-
-
-    #align and clip all the layers?  is there an AOI?
-
 
     #calc_msa_f
     msa_nodata = -1
@@ -271,18 +276,41 @@ def execute(args):
 
         return msa_f
 
+    LOGGER.info('calculate msa_f')
     msa_f_uri = os.path.join(args['workspace_dir'], 'msa_f%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [ffqi_uri], msa_f_op, msa_f_uri, gdal.GDT_Float32, msa_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
 
-
     #calc_msa_i
 
+
+
     #calc_msa_lu
+    lu_msa_lookup = {
+        0.0: 0.0, #map 0 to 0
+        1.0: 1.0, #primary veg
+        2.0: 0.7, #lightly used natural forest
+        3.0: 0.5, #secondary forest
+        4.0: 0.2, #forest plantation
+        5.0: 0.7, #livestock grazing
+        6.0: 0.1, #man-made baaastures
+        7.0: 0.5, #agroforesty
+        8.0: 0.3, #low-input agriculture
+        9.0: 0.1, #intenstive agriculture
+        10.0: 0.05, #built-up areas
+    }
+    msa_lu_uri = os.path.join(
+        args['workspace_dir'], 'msa_lu%s.tif' % file_suffix)
+    LOGGER.info('calculate msa_lu')
+    pygeoprocessing.geoprocessing.reclassify_dataset_uri(
+        globio_lulc_uri, lu_msa_lookup, msa_lu_uri,
+        gdal.GDT_Float32, globio_nodata, exception_flag='values_required')
 
     #calc msa msa = msa_f[tail_type] * msa_lu[tail_type] * msa_i[tail_type]
+
+
 
 
 def make_gaussian_kernel_uri(sigma, kernel_uri):
