@@ -99,34 +99,34 @@
           }
         },
         {
-          "id": "pasture",
+          "id": "pasture_uri",
           "args_id": "pasture_uri",
           "type": "file",
           "label": "Pasture (Raster)",
           "defaultValue": "",
-          "required": false,
+          "required": true,
           "validateAs": {
             "type": "GDAL"
           }
         },
         {
-          "id": "potential_veg",
-          "args_id": "potential_veg_uri",
+          "id": "potential_vegetation_uri",
+          "args_id": "potential_vegetation_uri",
           "type": "file",
           "label": "Potential Vegetation (Raster)",
           "defaultValue": "",
-          "required": false,
+          "required": true,
           "validateAs": {
             "type": "GDAL"
           }
         },
         {
-          "id": "yieldgap",
-          "args_id": "yieldgap_uri",
+          "id": "sum_yieldgap_uri",
+          "args_id": "sum_yieldgap_uri",
           "type": "file",
-          "label": "Yield Gap (Raster)",
+          "label": "Sum Yieldgap (Raster)",
           "defaultValue": "",
-          "required": false,
+          "required": true,
           "validateAs": {
             "type": "GDAL"
           }

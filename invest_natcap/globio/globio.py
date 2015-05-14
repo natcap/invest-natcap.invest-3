@@ -3,6 +3,7 @@
 import os
 
 import gdal
+import osr
 import numpy
 import pygeoprocessing
 
@@ -19,6 +20,9 @@ def execute(args):
 
     pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
 
+    out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
+        args['lulc_uri'])
+
     #reclassify the landcover map
     lulc_to_globio_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
         args['lulc_to_globio_table_uri'], 'lucode')
@@ -27,13 +31,172 @@ def execute(args):
         [(lulc_code, int(table['globio_lucode'])) for
          (lulc_code, table) in lulc_to_globio_table.items()])
 
-    globio_lulc_uri = os.path.join(
-        args['workspace_dir'], 'globio_lulc%s.tif' % file_suffix)
+    intermediate_globio_lulc_uri = os.path.join(
+        args['workspace_dir'], 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-        args['lulc_uri'], lulc_to_globio, globio_lulc_uri, gdal.GDT_Int32,
-        globio_nodata, exception_flag='values_required')
+        args['lulc_uri'], lulc_to_globio, intermediate_globio_lulc_uri,
+        gdal.GDT_Int32, globio_nodata, exception_flag='values_required')
 
+
+    globio_lulc_uri = os.path.join(
+        args['workspace_dir'], 'globio_lulc%s.tif' % file_suffix)
+
+    sum_yieldgap_uri = args['sum_yieldgap_uri']
+    potential_vegetation_uri = args['potential_vegetation_uri']
+    pasture_uri = args['pasture_uri']
+
+    #smoothed natural areas are natural areas run through a gaussian filter
+    natural_areas_uri = os.path.join(
+        args['workspace_dir'], 'natural_areas%s.tif' % file_suffix)
+    natural_areas_nodata = -1
+
+    def natural_area_mask_op(lulc_array):
+        """masking out natural areas"""
+        nodata_mask = lulc_array == globio_nodata
+        result = (
+            (lulc_array == 130) | (lulc_array == 1))
+        return numpy.where(nodata_mask, natural_areas_nodata, result)
+
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [intermediate_globio_lulc_uri], natural_area_mask_op,
+        natural_areas_uri, gdal.GDT_Int32, natural_areas_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        assert_datasets_projected=False, vectorize_op=False)
+
+    sigma = 9.0
+    gaussian_kernel_uri = os.path.join(
+        args['workspace_dir'], 'gaussian_kernel%s.tif' % file_suffix)
+    make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
+    smoothed_natural_areas_uri = os.path.join(
+        args['workspace_dir'], 'smoothed_natural_areas%s.tif' % file_suffix)
+    pygeoprocessing.geoprocessing.convolve_2d_uri(
+        natural_areas_uri, gaussian_kernel_uri, smoothed_natural_areas_uri)
+
+    ffqi_uri = os.path.join(
+        args['workspace_dir'], 'ffqi%s.tif' % file_suffix)
+
+    def ffqi_op(natural_areas_array, smoothed_natural_areas):
+        """mask out ffqi only where there's an ffqi"""
+        return numpy.where(
+            natural_areas_array != natural_areas_nodata,
+            natural_areas_array * smoothed_natural_areas,
+            natural_areas_nodata)
+
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [natural_areas_uri, smoothed_natural_areas_uri], ffqi_op,
+        ffqi_uri, gdal.GDT_Int32, natural_areas_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        assert_datasets_projected=False, vectorize_op=False)
+
+
+    #remap globio lulc to an internal lulc based on ag and yield gaps
+    #these came from the 'expansion_scenarios.py' script as numbers Justin
+    #provided way back on the unilever project.
+    high_intensity_agriculture_threshold = 1.0
+    pasture_threshold = .5
+    yieldgap_threshold = 45.6804906897
+    primary_threshold = .66
+    secondary_threshold = .33
+
+    sum_yieldgap_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        args['sum_yieldgap_uri'])
+
+    potential_vegetation_nodata = (
+        pygeoprocessing.geoprocessing.get_nodata_from_uri(
+            args['potential_vegetation_uri']))
+    pasture_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
+        args['pasture_uri'])
+
+    def create_globio_lulc(
+            lulc_array, sum_yieldgap, potential_vegetation_array, pasture_array,
+            ffqi):
+
+        #Step 1.2b: Assign high/low according to threshold based on yieldgap.
+        nodata_mask = lulc_array == globio_nodata
+        high_low_intensity_agriculture = numpy.where(
+            sum_yieldgap < yieldgap_threshold *
+            high_intensity_agriculture_threshold, 9.0, 8.0)
+
+        #Step 1.2c: Stamp ag_split classes onto input LULC
+        lulc_ag_split = numpy.where(
+            lulc_array == 132.0, high_low_intensity_agriculture, lulc_array)
+        nodata_mask = nodata_mask | (lulc_array == globio_nodata)
+
+        #Step 1.3a: Split Scrublands and grasslands into pristine vegetations,
+        #livestock grazing areas, and man-made pastures.
+        three_types_of_scrubland = numpy.where(
+            (potential_vegetation_array <= 8) & (lulc_ag_split == 131), 6.0,
+            5.0)
+
+        three_types_of_scrubland = numpy.where(
+            (three_types_of_scrubland == 5.0) &
+            (pasture_array < pasture_threshold), 1.0, three_types_of_scrubland)
+
+        #Step 1.3b: Stamp ag_split classes onto input LULC
+        broad_lulc_shrub_split = numpy.where(
+            lulc_ag_split == 131, three_types_of_scrubland, lulc_ag_split)
+
+        #Step 1.4a: Split Forests into Primary, Secondary, Lightly Used and
+        #Plantation.
+        four_types_of_forest = numpy.empty(lulc_array.shape)
+        four_types_of_forest[(ffqi >= primary_threshold)] = 1.0
+        four_types_of_forest[(
+            ffqi < primary_threshold) & (ffqi >= secondary_threshold)] = 3.0
+        four_types_of_forest[(ffqi < secondary_threshold)] = 4.0
+
+        #Step 1.4b: Stamp ag_split classes onto input LULC
+        globio_lulc = numpy.where(
+            broad_lulc_shrub_split == 130, four_types_of_forest,
+            broad_lulc_shrub_split) #stamp primary vegetation
+
+        return numpy.where(nodata_mask, globio_nodata, globio_lulc)
+
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [intermediate_globio_lulc_uri, sum_yieldgap_uri,
+         potential_vegetation_uri, pasture_uri, ffqi_uri], create_globio_lulc,
+        globio_lulc_uri, gdal.GDT_Int32, globio_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        assert_datasets_projected=False, vectorize_op=False)
+
+    """
+    #Step 1.2b: Assign high/low according to threshold based on yieldgap.
+    #high_low_intensity_agriculture_uri = args["export_folder"]+"high_low_intensity_agriculture_"+args['run_id']+".tif"
+    high_intensity_agriculture_threshold = 1 #hardcode for now until UI is determined. Eventually this is a user input. Do I bring it into the ARGS dict?
+    high_low_intensity_agriculture = numpy.where(sum_yieldgap < float(args['yieldgap_threshold']*high_intensity_agriculture_threshold), 9.0, 8.0) #45. = average yieldgap on global cells with nonzero yieldgap.
+
+
+    #Step 1.2c: Stamp ag_split classes onto input LULC
+    broad_lulc_ag_split = numpy.where(broad_lulc_array==132.0, high_low_intensity_agriculture, broad_lulc_array)
+
+    #Step 1.3a: Split Scrublands and grasslands into pristine vegetations,
+    #livestock grazing areas, and man-made pastures.
+    three_types_of_scrubland = numpy.zeros(scenario_lulc_array.shape)
+    potential_vegetation_array = geotiff_to_array(aligned_agriculture_uris[0])
+    three_types_of_scrubland = numpy.where((potential_vegetation_array <= 8) & (broad_lulc_ag_split== 131), 6.0, 5.0) # < 8 min potential veg means should have been forest, 131 in broad  is grass, so 1.0 implies man made pasture
+    pasture_array = geotiff_to_array(aligned_agriculture_uris[1])
+    three_types_of_scrubland = numpy.where((three_types_of_scrubland == 5.0) & (pasture_array < args['pasture_threshold']), 1.0, three_types_of_scrubland)
+
+    #Step 1.3b: Stamp ag_split classes onto input LULC
+    broad_lulc_shrub_split = numpy.where(broad_lulc_ag_split==131, three_types_of_scrubland, broad_lulc_ag_split)
+
+    #Step 1.4a: Split Forests into Primary, Secondary, Lightly Used and Plantation.
+    sigma = 9
+    primary_threshold = args['primary_threshold']
+    secondary_threshold = args['secondary_threshold']
+    is_natural = (broad_lulc_shrub_split == 130) | (broad_lulc_shrub_split == 1)
+    blurred = scipy.ndimage.filters.gaussian_filter(is_natural.astype(float), sigma, mode='constant', cval=0.0)
+    ffqi = blurred * is_natural
+
+    four_types_of_forest = numpy.empty(scenario_lulc_array.shape)
+    four_types_of_forest[(ffqi >= primary_threshold)] = 1.0
+    four_types_of_forest[(ffqi < primary_threshold) & (ffqi >= secondary_threshold)] = 3.0
+    four_types_of_forest[(ffqi < secondary_threshold)] = 4.0
+
+    #Step 1.4b: Stamp ag_split classes onto input LULC
+    globio_lulc = numpy.where(broad_lulc_shrub_split == 130 ,four_types_of_forest, broad_lulc_shrub_split) #stamp primary vegetation
+
+    return globio_lulc"""
 
     #load the infrastructure layers from disk
     infrastructure_filenames = []
@@ -88,7 +251,6 @@ def execute(args):
 
     #align and clip all the layers?  is there an AOI?
 
-    #load all the infrastructure layers and make a single layer
 
     #calc_msa_f
 
@@ -98,3 +260,41 @@ def execute(args):
 
     #calc msa msa = msa_f[tail_type] * msa_lu[tail_type] * msa_i[tail_type]
 
+
+def make_gaussian_kernel_uri(sigma, kernel_uri):
+    """create a gaussian kernel raster"""
+    max_distance = sigma * 5
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=['BIGTIFF=IF_SAFER'])
+
+    #Make some kind of geotransform, it doesn't matter what but
+    #will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
+    srs = osr.SpatialReference()
+    srs.SetUTM(11, 1)
+    srs.SetWellKnownGeogCS('NAD27')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    col_index = numpy.array(xrange(kernel_size))
+    integration = 0.0
+    for row_index in xrange(kernel_size):
+        kernel = numpy.exp(
+            -((row_index - max_distance)**2 +
+                (col_index - max_distance) ** 2)/(2.0*sigma**2)).reshape(
+                    1, kernel_size)
+
+        integration += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
+    for row_index in xrange(kernel_size):
+        kernel_row = kernel_band.ReadAsArray(
+            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
+        kernel_row /= integration
+        kernel_band.WriteArray(kernel_row, 0, row_index)
