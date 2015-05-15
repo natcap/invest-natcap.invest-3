@@ -454,8 +454,15 @@ def plot_transects(args):
             ]
 
         dist_hdf5 = ((end[0]-origin[0])**2 + (end[1]-origin[1])**2)**.5
-        dx_hdf5 =  dist_hdf5 / bathymetry_dataset_tiff[transect].size
-        x_hdf5 = np.array(range(start_hdf5, end_hdf5)) / dx_hdf5
+        dx_hdf5 =  dist_hdf5 / bathymetry_dataset_hdf5[transect].size
+        x_hdf5 = np.array(range(start_hdf5, end_hdf5)) * dx_hdf5
+        offshore_distance_hdf5 = x_hdf5[shore_hdf5-start_hdf5]
+        x_hdf5 -= offshore_distance_hdf5
+        print('HDF5')
+        print('pixels', bathymetry_dataset_hdf5[transect].size)
+        print('dist_hdf5', dist_hdf5)
+        print('step', dx_hdf5)
+        print('values', x_hdf5[:5], x_hdf5[-5:])
 
         shore_tiff = shore_dataset_tiff[transect]
         (start_tiff, end_tiff) = indices_limit_dataset_tiff[transect]
@@ -471,16 +478,27 @@ def plot_transects(args):
             ]
 
         dist_tiff = ((end[0]-origin[0])**2 + (end[1]-origin[1])**2)**.5
-        dx_tiff =  dist_tiff / bathymetry_dataset_hdf5[transect].size
-        x_tiff = np.array(range(start_tiff, end_tiff)) / dx_tiff
-
+        dx_tiff =  dist_tiff / bathymetry_dataset_tiff[transect].size
+        x_tiff = np.array(range(start_tiff, end_tiff)) * dx_tiff
+        offshore_distance_tiff = x_tiff[shore_tiff-start_tiff]
+        x_tiff -= offshore_distance_tiff
+        print('TIFF')
+        print('pixels', bathymetry_dataset_tiff[transect].size)
+        print('dist_hdf5', dist_tiff)
+        print('step', dx_tiff)
+        print('values', x_tiff[:5], x_tiff[-5:])
 
         # Plot rough transect in subplot 1
+        plt.subplots(2, sharex = True)
+        
         plt.subplot(211)
         plt.plot(x_tiff, \
             bathymetry_dataset_tiff[transect, start_tiff:end_tiff], 'r')
         plt.plot(x_hdf5, \
             bathymetry_dataset_hdf5[transect, start_hdf5:end_hdf5], 'k')
+
+        plt.ylabel('Elevation (m)')
+        plt.title('Coarse vs. resampled shore profiles')
 
 
         # Plot smoothed transect and habitats in subplot 2
@@ -495,6 +513,7 @@ def plot_transects(args):
         for habitat in habitat_codes:
             habitat_ids = np.where(habitat_types == habitat)[0]
             habitats_dx = habitat_ids / dx_hdf5
+            habitats_dx -= offshore_distance_hdf5
             habitats_bathy = \
                 bathymetry_dataset_hdf5[transect, start_hdf5:end_hdf5]
             habitats_bathy = habitats_bathy[habitat_ids]
@@ -503,9 +522,12 @@ def plot_transects(args):
             plt.plot(habitats_dx, habitats_bathy, '.', \
                 c=RGB_color_map[(habitat + 2) % color_count])
 
+        plt.xlabel('Offshore distance (m)')
+        plt.ylabel('Elevation (m)')
+        plt.title('Resampled shore profiles with habitats')
+
         plt.savefig(os.path.join( \
             args['intermediate_dir'], 'profile_' + str(transect) + '.png'))
-
 
         plt.subplot(211)
         plt.cla()
