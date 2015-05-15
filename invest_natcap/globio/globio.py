@@ -215,12 +215,34 @@ def execute(args):
             args['infrastructure_dir']):
 
         for filename in filename_list:
+            LOGGER.debug(filename)
             if filename.lower().endswith(".tif"):
+                LOGGER.debug("tiff added %s", filename)
                 infrastructure_filenames.append(
                     os.path.join(root_directory, filename))
                 infrastructure_nodata_list.append(
                     pygeoprocessing.geoprocessing.get_nodata_from_uri(
                         infrastructure_filenames[-1]))
+            if filename.lower().endswith(".shp"):
+                LOGGER.debug("shape added %s", filename)
+                infrastructure_tmp_raster = (
+                   os.path.join(args['workspace_dir'], os.path.basename(filename.lower() + ".tif")))
+                pygeoprocessing.geoprocessing.new_raster_from_base_uri(
+                    args['lulc_uri'], infrastructure_tmp_raster,
+                    'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
+                pygeoprocessing.geoprocessing.rasterize_layer_uri(
+                    infrastructure_tmp_raster,
+                    os.path.join(root_directory, filename), burn_values=[1],
+                    option_list=["ALL_TOUCHED=TRUE"])
+                infrastructure_filenames.append(infrastructure_tmp_raster)
+                infrastructure_nodata_list.append(
+                    pygeoprocessing.geoprocessing.get_nodata_from_uri(
+                        infrastructure_filenames[-1]))
+
+    if len(infrastructure_filenames) == 0:
+        raise ValueError(
+            "infrastructure directory didn't have any GeoTIFFS or "
+            "Shapefiles at %s", args['infrastructure_dir'])
 
     infrastructure_nodata = -1
     infrastructure_uri = os.path.join(
@@ -234,7 +256,7 @@ def execute(args):
             masks out all of them"""
         nodata_mask = (
             infrastructure_array_list[0] == infrastructure_nodata_list[0])
-        infrastructure_result = infrastructure_nodata_list[0] > 0
+        infrastructure_result = infrastructure_array_list[0] > 0
         for index in range(1, len(infrastructure_array_list)):
             current_nodata = (
                 infrastructure_array_list[index] ==
