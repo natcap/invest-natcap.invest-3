@@ -12,6 +12,7 @@ import scipy as sp
 from scipy import interpolate
 from scipy import ndimage
 from scipy import sparse
+import matplotlib.pyplot as plt
 import h5py
 
 from osgeo import ogr
@@ -46,11 +47,15 @@ def execute(args):
     else:
         args['transect_data_uri'] = \
             os.path.join(args['output_dir'], 'transect_data.h5')
+
+    args['tiff_transect_data_uri'] = \
+        os.path.join(args['intermediate_dir'], 'output_raster_transect.h5')
     
     # Run the profile generator
     if 'Profile generator' in args['modules_to_run']: 
-        compute_transects(args)
+        #compute_transects(args)
         export_transect_coordinates_to_CSV(args['transect_data_uri'])
+        plot_transects(args)
     
     # Run the nearshore wave and erosion model
     if 'wave & erosion' in args['modules_to_run']:
@@ -385,6 +390,117 @@ def transfer_tidal_forcing(transect_data_file_tiff, transect_data_file_hdf5):
             print '.',
         dataset_hdf5[transect, ...] = dataset_tiff[transect, ...]
     print('')
+
+
+
+def plot_transects(args):
+    # Set of 26 maximally different colors, used for habitats. Taken from
+    # http://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
+    RGB_color_map = [[240,163,255],[0,117,220],[153,63,0],[76,0,92], \
+        [25,25,25],[0,92,49],[43,206,72],[255,204,153],[128,128,128], \
+        [148,255,181],[143,124,0],[157,204,0],[194,0,136],[0,51,128], \
+        [255,164,5],[255,168,187],[66,102,0],[255,0,16],[94,241,242], \
+        [0,153,143],[224,255,102],[116,10,255],[153,0,0],[255,255,128], \
+        [255,255,0],[255,80,5]]
+
+    matplotlib.colors.ListedColormap(RGB_color_map, name = 'custom_colormap')
+
+    # Gather the raw profile dataset
+    transect_hdf5 = h5py.File(args['transect_data_uri'])
+
+    positions_dataset_hdf5 = transect_hdf5['xy_positions']
+    bathymetry_dataset_hdf5 = transect_hdf5['bathymetry']
+    habitats_dataset_hdf5 = transect_hdf5['habitat_type']
+
+    limits_group_hdf5 = transect_hdf5['limits']
+    indices_limit_dataset_hdf5 = limits_group_hdf5['indices']
+    shore_dataset_hdf5 = transect_hdf5['shore_index']
+
+    # Gather the smoothed profile dataset
+    transect_tiff = h5py.File(args['tiff_transect_data_uri'])
+
+    positions_dataset_tiff = transect_tiff['xy_positions']
+    bathymetry_dataset_tiff = transect_tiff['bathymetry']
+
+    limits_group_tiff = transect_tiff['limits']
+    indices_limit_dataset_tiff = limits_group_tiff['indices']
+    shore_dataset_tiff = transect_tiff['shore_index']
+
+
+    # Gather the habitats dataset
+    habitat_type_dataset_hdf5 = transect_hdf5['habitat_type']
+
+
+    # Loop through the transects
+    LOGGER.debug('Generating transect graphs...')
+    progress_step = max(bathymetry_dataset_hdf5.shape[0] / 39, 1)
+    for transect in range(0,bathymetry_dataset_hdf5.shape[0],50):
+        if transect  % progress_step == 0:
+            print '.',
+
+        shore_hdf5 = shore_dataset_hdf5[transect]
+        (start_hdf5, end_hdf5) = indices_limit_dataset_hdf5[transect]
+
+        origin = [ \
+            positions_dataset_hdf5[transect, 0, start_hdf5], \
+            positions_dataset_hdf5[transect, 1, start_hdf5], \
+            ]
+
+        end = [ \
+            positions_dataset_hdf5[transect, 0, end_hdf5-1], \
+            positions_dataset_hdf5[transect, 1, end_hdf5-1], \
+            ]
+
+        dist_hdf5 = ((end[0]-origin[0])**2 + (end[1]-origin[1])**2)**.5
+        dx_hdf5 =  dist_hdf5 / bathymetry_dataset_tiff[transect].size
+        x_hdf5 = np.array(range(start_hdf5, end_hdf5)) / dx_hdf5
+
+        shore_tiff = shore_dataset_tiff[transect]
+        (start_tiff, end_tiff) = indices_limit_dataset_tiff[transect]
+
+        origin = [ \
+            positions_dataset_tiff[transect, 0, start_tiff], \
+            positions_dataset_tiff[transect, 1, start_tiff], \
+            ]
+
+        end = [ \
+            positions_dataset_tiff[transect, 0, end_tiff-1], \
+            positions_dataset_tiff[transect, 1, end_tiff-1], \
+            ]
+
+        dist_tiff = ((end[0]-origin[0])**2 + (end[1]-origin[1])**2)**.5
+        dx_tiff =  dist_tiff / bathymetry_dataset_hdf5[transect].size
+        x_tiff = np.array(range(start_tiff, end_tiff)) / dx_tiff
+
+
+        # Plot rough transect in subplot 1
+        plt.subplot(211)
+        plt.plot(x_tiff, \
+            bathymetry_dataset_tiff[transect, start_tiff:end_tiff], 'r')
+        plt.plot(x_hdf5, \
+            bathymetry_dataset_hdf5[transect, start_hdf5:end_hdf5], 'k')
+
+
+        # Plot smoothed transect and habitats in subplot 2
+        plt.subplot(212)
+        plt.plot(x_hdf5, \
+            bathymetry_dataset_hdf5[transect, start_hdf5:end_hdf5], 'k')
+        # Load the habitats
+        habitat_types = habitats_dataset_hdf5[transect, start_hdf5:end_hdf5]
+        habitat_codes = numpy.unique(habitat_types)
+
+        plt.savefig(os.path.join( \
+            args['intermediate_dir'], 'profile_' + str(transect) + '.png'))
+
+
+        plt.subplot(211)
+        plt.cla()
+
+        plt.subplot(212)
+        plt.cla()
+        
+
+    print(' ')
 
 
 
@@ -814,8 +930,7 @@ def compute_transects(args):
         args['tidal_forcing_field_count'], \
         habitat_nodata)
 
-    tiff_transect_data_uri = \
-        os.path.join(args['intermediate_dir'], 'output_raster_transect.h5')
+    tiff_transect_data_uri = args['tiff_transect_data_uri']
 
     habitat_type_dataset_tiff, \
     habitat_properties_dataset_tiff, \
