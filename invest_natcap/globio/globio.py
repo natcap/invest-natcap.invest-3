@@ -102,11 +102,11 @@ def execute(args):
     #remap globio lulc to an internal lulc based on ag and yield gaps
     #these came from the 'expansion_scenarios.py' script as numbers Justin
     #provided way back on the unilever project.
-    high_intensity_agriculture_threshold = 1.0
-    pasture_threshold = .5
-    yieldgap_threshold = 45.6804906897
-    primary_threshold = .66
-    secondary_threshold = .33
+    high_intensity_agriculture_threshold = float(args['high_intensity_agriculture_threshold'])
+    pasture_threshold = float(args['pasture_threshold'])
+    yieldgap_threshold = float(args['yieldgap_threshold'])
+    primary_threshold = float(args['primary_threshold'])
+    secondary_threshold = float(args['secondary_threshold'])
 
     sum_yieldgap_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
         args['sum_yieldgap_uri'])
