@@ -74,7 +74,7 @@ def execute(args):
 
 def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
     field_count, soil_field_count, climatic_forcing_field_count, \
-    tidal_forcing_field_count, nodata):
+    tidal_forcing_field_count, nodata, args):
     """ Create an hdf5 file with all the datasets used in the output
 
         Inputs: -hdf5_uri: uri to where the HDF5 file will be stored
@@ -102,6 +102,11 @@ def create_HDF5_datasets(hdf5_uri, transect_count, max_transect_size, \
             (transect_count, max_transect_size), \
             compression = 'gzip', fillvalue = 0, dtype = 'i4')
 
+    # Add size and model resolution to the attributes
+    habitat_type_dataset.attrs.create('transect_spacing', args['i_transect_spacing'])
+    habitat_type_dataset.attrs.create('model_resolution', args['bathy_cell_size'])
+    habitat_type_dataset.attrs.create('bathymetry_resolution', args['i_input_cell_size'])
+    
     habitat_properties_dataset = \
         transect_data_file.create_dataset('habitat_properties', \
             (transect_count, field_count, max_transect_size), \
@@ -432,12 +437,21 @@ def plot_transects(args):
     # Gather the habitats dataset
     habitat_type_dataset_hdf5 = transect_hdf5['habitat_type']
 
+    # Add the transects to render in a set:
+    transects_to_plot = set()
+    for transect in range(0,bathymetry_dataset_hdf5.shape[0], \
+        args['transect_rendering_skip']):
+        transects_to_plot.add(transect)
+    # These are the transects from the user-provided CSV
+    if 'transects_to_plot_uri' in args:
+        additional_transects = \
+            load_transects_from_CSV(args['transects_to_plot_uri'])
+        transects_to_plot.union(additional_transects)
 
     # Loop through the transects
     LOGGER.debug('Generating transect graphs...')
     progress_step = max(bathymetry_dataset_hdf5.shape[0] / 39, 1)
-    for transect in range(0,bathymetry_dataset_hdf5.shape[0], \
-        args['transect_rendering_skip']):
+    for transect in transects_to_plot:
         if transect  % progress_step == 0:
             print '.',
 
@@ -459,11 +473,11 @@ def plot_transects(args):
         x_hdf5 = np.array(range(start_hdf5, end_hdf5)) * dx_hdf5
         offshore_distance_hdf5 = x_hdf5[shore_hdf5-start_hdf5]
         x_hdf5 -= offshore_distance_hdf5
-        print('HDF5')
-        print('pixels', bathymetry_dataset_hdf5[transect].size)
-        print('dist_hdf5', dist_hdf5)
-        print('step', dx_hdf5)
-        print('values', x_hdf5[:5], x_hdf5[-5:])
+#        print('HDF5')
+#        print('pixels', bathymetry_dataset_hdf5[transect].size)
+#        print('dist_hdf5', dist_hdf5)
+#        print('step', dx_hdf5)
+#        print('values', x_hdf5[:5], x_hdf5[-5:])
 
         shore_tiff = shore_dataset_tiff[transect]
         (start_tiff, end_tiff) = indices_limit_dataset_tiff[transect]
@@ -483,11 +497,11 @@ def plot_transects(args):
         x_tiff = np.array(range(start_tiff, end_tiff)) * dx_tiff
         offshore_distance_tiff = x_tiff[shore_tiff-start_tiff]
         x_tiff -= offshore_distance_tiff
-        print('TIFF')
-        print('pixels', bathymetry_dataset_tiff[transect].size)
-        print('dist_hdf5', dist_tiff)
-        print('step', dx_tiff)
-        print('values', x_tiff[:5], x_tiff[-5:])
+#        print('TIFF')
+#        print('pixels', bathymetry_dataset_tiff[transect].size)
+#        print('dist_hdf5', dist_tiff)
+#        print('step', dx_tiff)
+#        print('values', x_tiff[:5], x_tiff[-5:])
 
         # Plot rough transect in subplot 1
         plt.subplots(2, sharex = True)
@@ -965,7 +979,7 @@ def compute_transects(args):
         args['soil_field_count'], \
         args['climatic_forcing_field_count'], \
         args['tidal_forcing_field_count'], \
-        habitat_nodata)
+        habitat_nodata, args)
 
     tiff_transect_data_uri = args['tiff_transect_data_uri']
 
@@ -992,7 +1006,7 @@ def compute_transects(args):
         args['soil_field_count'], \
         args['climatic_forcing_field_count'], \
         args['tidal_forcing_field_count'], \
-        habitat_nodata)
+        habitat_nodata, args)
 
 
     #Todo: Remove this by using datasets directly instead of transect_info_tiff
@@ -1004,7 +1018,7 @@ def compute_transects(args):
     LOGGER.debug('Computing fetch...')
 
     rays_per_sector = 1
-    d_max = 50000 # 50km
+    fetch_distance = args['fetch_distance'] # Distance in meters
     cell_size = args['bathy_cell_size']
     
     shore_points_row = []
@@ -1069,8 +1083,8 @@ def compute_transects(args):
 
     # Compute fetch, which will return fetch information in the same order
     # as the incoming shore points order
-    fetch_data = compute_fetch(landmass, rays_per_sector, d_max, cell_size, \
-        shore_points, bathymetry, bathymetry_nodata, gt)
+    fetch_data = compute_fetch(landmass, rays_per_sector, fetch_distance, \
+        cell_size, shore_points, bathymetry, bathymetry_nodata, gt)
     
     for transect in range(len(fetch_data[0])):
         fetch_distances_dataset_tiff[transect, ...] = \
@@ -1094,7 +1108,6 @@ def compute_transects(args):
     landmass_raster = None
 
 
-#    sys.exit(0)
     # TODO: Break this up so we don't use so much memory
     # On a second thought, this might be the best option: the model
     # can run optimally with enough memory, or use the HD otherwise...
@@ -1670,71 +1683,70 @@ def export_transect_coordinates_to_CSV(transect_data_uri):
 # ----------------------------------------------------
 # Loading the transects to exclude from a csv, if any
 # ----------------------------------------------------
-def load_excluded_transects(args):
+def load_transects_from_CSV(excluded_transects_uri):
     """Load the ecluded tranects from a CSV file in a python set.
 
         Inputs: 
-            -args['excluded_transects_uri']: the excluded transect CSV URI
+            -excluded_transects_uri: the excluded transect CSV URI
 
         Returns a set containing the excluded transect IDs as they appear in 
             "transect_data.csv". 
             If there is no CSV specified, the set is empty.
     """    
     
-    args['excluded_transects'] = set()
+    excluded_transects = set()
 
-    if 'excluded_transects_uri' in args:
-        if not os.path.isfile(args['excluded_transects_uri']): 
-            raise IOError, "Can't open transect exclusion file " + \
-            args['excluded_transects_uri']
+    if not os.path.isfile(excluded_transects_uri): 
+        raise IOError, "Can't open transect exclusion file " + \
+        excluded_transects_uri
 
-        with open(args['excluded_transects_uri']) as csvfile:
-            excluded_transects_reader = csv.reader(csvfile)
+    with open(excluded_transects_uri) as csvfile:
+        excluded_transects_reader = csv.reader(csvfile)
 
-            for row in excluded_transects_reader:
-                for item in row:
+        for row in excluded_transects_reader:
+            for item in row:
 
-                    # First, try to cast as int:
+                # First, try to cast as int:
+                try:
+                    transect = int(item)
+                    if transect < 0:
+                        raise IndexError, \
+                            "A transect ID can't be negative (" + \
+                                str(item) + ")" 
+                    excluded_transects.add(transect)
+
+                # If it doesn't work, it might be a range:
+                except ValueError:
+                    transect_range = item.split('-')
+                    if len(transect_range) != 2:
+                        raise IndexError, \
+                            "Can't interpret CSV token " + item
+
                     try:
-                        transect = int(item)
-                        if transect < 0:
+                        start = int(transect_range[0])
+                        end = int(transect_range[1])
+
+                        # Enforce start >= end
+                        if start < 0:
                             raise IndexError, \
                                 "A transect ID can't be negative (" + \
-                                    str(item) + ")" 
-                        args['excluded_transects'].add(transect)
+                                str(item) + ")"
+                        if end < start:
+                            raise ValueError,  \
+                                "Invalid range: expected (start >= end), " + \
+                                " got (" + str(start) + "," + str(end) + ")"    
+                        
+                        # It is a range, now add the transects to the set:
+                        for transect in range(start, end+1):
+                            excluded_transects.add(transect)
 
-                    # If it doesn't work, it might be a range:
                     except ValueError:
-                        transect_range = item.split('-')
-                        if len(transect_range) != 2:
-                            raise IndexError, \
-                                "Can't interpret CSV token " + item
+                        LOGGER.error("Can't interpret CSV token %s as a range", item)
+                        raise
 
-                        try:
-                            start = int(transect_range[0])
-                            end = int(transect_range[1])
+    LOGGER.debug('Found %i transects to exclude', len(excluded_transects))
 
-                            # Enforce start >= end
-                            if start < 0:
-                                raise IndexError, \
-                                    "A transect ID can't be negative (" + \
-                                    str(item) + ")"
-                            if end < start:
-                                raise ValueError,  \
-                                    "Invalid range: expected (start >= end), " + \
-                                    " got (" + str(start) + "," + str(end) + ")"    
-                            
-                            # It is a range, now add the transects to the set:
-                            for transect in range(start, end+1):
-                                args['excluded_transects'].add(transect)
-
-                        except ValueError:
-                            LOGGER.error("Can't interpret CSV token %s as a range", item)
-                            raise
-
-    LOGGER.debug('Found %i transects to exclude', len(args['excluded_transects']))
-
-    return args['excluded_transects']
+    return excluded_transects
 
 
 # ----------------------------------------------
@@ -1743,7 +1755,11 @@ def load_excluded_transects(args):
 def compute_nearshore_and_wave_erosion(args):
     LOGGER.debug('Computing nearshore wave and erosion...')
 
-    excluded_transects = load_excluded_transects(args)
+    excluded_transects = set()
+
+    if 'excluded_transects_uri' in args:
+        excluded_transects = load_transects_from_CSV( \
+            args['excluded_transects_uri'])
 
     LOGGER.debug('Loading HDF5 files...')
 
@@ -1858,7 +1874,8 @@ def compute_nearshore_and_wave_erosion(args):
     coordinates_limits = numpy.array((transect_length, 4))
 
     # Open field indices file, so that we can access a specific field by name
-    field_indices_uri = os.path.join(args['intermediate_dir'], 'field_indices')
+    field_indices_uri = os.path.join(args['output_dir'], \
+        'habitat_field_indices.json')
     field_indices = json.load(open(field_indices_uri)) # Open field indices info
 
     # Field indices
@@ -1889,6 +1906,7 @@ def compute_nearshore_and_wave_erosion(args):
 #    for transect in range(2000, 2500): # Debug
     progress_step = max(transect_count / 39, 1)
     for transect in range(transect_count): # Release
+        print('transect', transect)
         if transect % progress_step == 0:
             print '.',
 #        print('')
@@ -3062,11 +3080,6 @@ def combine_natural_habitats(args, transect_data_file, max_transect_length):
     positions_dataset = transect_data_file['ij_positions']
     shore_dataset = transect_data_file['shore_index']
 
-    # Add size and model resolution to the attributes
-    habitat_type_dataset.attrs.create('transect_spacing', args['i_transect_spacing'])
-    habitat_type_dataset.attrs.create('model_resolution', args['bathy_cell_size'])
-    habitat_type_dataset.attrs.create('bathymetry_resolution', args['i_input_cell_size'])
-    
 
     # A dictionary that maps habitat codes as found on site to a habitat name:
     # {'kelp':1, 'seagrass':2, 'levee':5, etc.}
