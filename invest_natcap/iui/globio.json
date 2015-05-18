@@ -130,6 +130,51 @@
           "validateAs": {
             "type": "GDAL"
           }
+        },
+        {
+          "id": "high_intensity_agriculture_threshold",
+          "args_id": "high_intensity_agriculture_threshold",
+          "type": "text",
+          "label": "High Intensity Agriculture Threshold",
+          "defaultValue": "1.0",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$"
+        },
+        {
+          "id": "pasture_threshold",
+          "args_id": "pasture_threshold",
+          "type": "text",
+          "label": "Pasture Threshold",
+          "defaultValue": "0.5",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$"
+        },
+        {
+          "id": "yieldgap_threshold",
+          "args_id": "yieldgap_threshold",
+          "type": "text",
+          "label": "Yieldgap Threshold",
+          "defaultValue": "45.6804906897",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$"
+        },
+        {
+          "id": "primary_threshold",
+          "args_id": "primary_threshold",
+          "type": "text",
+          "label": "Primary Threshold",
+          "defaultValue": "0.66",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$"
+        },
+        {
+          "id": "secondary_threshold",
+          "args_id": "secondary_threshold",
+          "type": "text",
+          "label": "Secondary Threshold",
+          "defaultValue": "0.33",
+          "required": true,
+          "validText": "^[0-9]+\\.?[0-9]*$"
         }
       ]
     }
