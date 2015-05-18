@@ -360,7 +360,7 @@ def execute(args):
         3.0: 0.5, #secondary forest
         4.0: 0.2, #forest plantation
         5.0: 0.7, #livestock grazing
-        6.0: 0.1, #man-made baaastures
+        6.0: 0.1, #man-made pastures
         7.0: 0.5, #agroforesty
         8.0: 0.3, #low-input agriculture
         9.0: 0.1, #intenstive agriculture
