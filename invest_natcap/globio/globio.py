@@ -94,7 +94,7 @@ def execute(args):
     LOGGER.info('calculate ffqi')
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [natural_areas_uri, smoothed_natural_areas_uri], ffqi_op,
-        ffqi_uri, gdal.GDT_Int32, natural_areas_nodata,
+        ffqi_uri, gdal.GDT_Float32, natural_areas_nodata,
         out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
 
