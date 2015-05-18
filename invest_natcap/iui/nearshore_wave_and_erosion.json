@@ -299,6 +299,17 @@
                   "helpText": "Between transect space dictates how many transects are going to be generated along the shore. The more trnsects, the more accurate is the shore. Keep in mind that a smaller resolution yields longer computing time."
                 },
                 {
+                  "label": "Plot every Nth transect",
+                  "id": "transect_rendering_skip",
+                  "args_id": "transect_rendering_skip",
+                  "type": "text",
+                  "required": true,
+                  "dataType": "int",
+                  "validText": "[0-9]*",
+                  "defaultValue": "10",
+                  "helpText": "How many transects the tool should skip while generating the shore profiles."
+                },
+                {
                   "label": "Wave Watch III Model Data (Optional)",
                   "id": "wave_watch_3_uri",
                   "args_id": "wave_watch_3_uri",

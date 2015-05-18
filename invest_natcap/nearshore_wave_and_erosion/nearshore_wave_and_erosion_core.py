@@ -436,7 +436,8 @@ def plot_transects(args):
     # Loop through the transects
     LOGGER.debug('Generating transect graphs...')
     progress_step = max(bathymetry_dataset_hdf5.shape[0] / 39, 1)
-    for transect in range(0,bathymetry_dataset_hdf5.shape[0],10):
+    for transect in range(0,bathymetry_dataset_hdf5.shape[0], \
+        args['transect_rendering_skip']):
         if transect  % progress_step == 0:
             print '.',
 
@@ -512,7 +513,7 @@ def plot_transects(args):
 
         for habitat in habitat_codes:
             habitat_ids = np.where(habitat_types == habitat)[0]
-            habitats_dx = habitat_ids / dx_hdf5
+            habitats_dx = habitat_ids * dx_hdf5
             habitats_dx -= offshore_distance_hdf5
             habitats_bathy = \
                 bathymetry_dataset_hdf5[transect, start_hdf5:end_hdf5]
