@@ -14,6 +14,7 @@ from scipy import ndimage
 from scipy import sparse
 import matplotlib.pyplot as plt
 import h5py
+import unicodedata
 
 from osgeo import ogr
 from osgeo import gdal
@@ -39,6 +40,10 @@ def execute(args):
         
         returns nothing"""
     logging.info('executing coastal_protection_core')
+
+    # Field indices URI
+    args['field_indices_uri'] = \
+        os.path.join(args['output_dir'], 'habitat_field_indices.json')
 
     # User-specified transect data URI 
     if 'cross_shore_profile_uri' in args:
@@ -412,6 +417,9 @@ def plot_transects(args):
 
     matplotlib.colors.ListedColormap(RGB_color_map, name = 'custom_colormap')
 
+    # Load the habitat names
+    field_indices = json.load(open(args['field_indices_uri']))
+
     # Gather the raw profile dataset
     transect_hdf5 = h5py.File(args['transect_data_uri'])
 
@@ -503,21 +511,55 @@ def plot_transects(args):
 #        print('step', dx_tiff)
 #        print('values', x_tiff[:5], x_tiff[-5:])
 
-        # Plot rough transect in subplot 1
-        plt.subplots(2, sharex = True)
+        x_min_pos = x_hdf5[0]
+        x_max_pos = x_hdf5[-1]
+        x_min_label = str(int(round(x_min_pos)))
+        x_max_label = str(int(round(x_max_pos)))
         
-        plt.subplot(211)
+        y_min_pos = bathymetry_dataset_hdf5[transect, start_hdf5]
+        y_max_pos = bathymetry_dataset_hdf5[transect, end_hdf5-1]
+        y_min_label = str(int(round(y_min_pos)))
+        y_max_label = str(int(round(y_max_pos)))
+        
+
+        # Plot rough transect in subplot 1
+        plt.subplots(2)
+        
+        ax0 = plt.subplot(211)
         plt.plot(x_tiff, \
-            bathymetry_dataset_tiff[transect, start_tiff:end_tiff], 'r')
+            bathymetry_dataset_tiff[transect, start_tiff:end_tiff], 'r', \
+            label = 'raw profile')
         plt.plot(x_hdf5, \
-            bathymetry_dataset_hdf5[transect, start_hdf5:end_hdf5], 'k')
+            bathymetry_dataset_hdf5[transect, start_hdf5:end_hdf5], 'k', \
+            label = 'smoothed profile')
+
+        l = plt.legend(loc=7, prop={'size':'x-small'})
+        l.get_frame().set_alpha(0.4)
+
+        ax0.xaxis.set_ticks_position('bottom')
+        ax0.yaxis.set_ticks_position('left')
+
+        ax0.spines['right'].set_visible(False)
+        ax0.spines['top'].set_visible(False)
+
+        ax0.spines['bottom'].set_bounds(x_hdf5[0], x_hdf5[-1])
+        ax0.spines['left'].set_bounds( \
+            bathymetry_dataset_hdf5[transect, start_hdf5], \
+            bathymetry_dataset_hdf5[transect, end_hdf5-1])
+
+        ax0.add_line(Line2D([x_min_pos, x_max_pos], [0., 0.], c='k', ls=':'))
 
         plt.ylabel('Elevation (m)')
         plt.title('Coarse vs. resampled shore profiles')
 
+        plt.xticks([x_min_pos, 0.0, x_max_pos], ('', '0', ''))
+        plt.yticks([y_min_pos, 0.0, y_max_pos], ('', '0', ''))
+
+        plt.xlim((x_hdf5[0], x_hdf5[-1]))
+
 
         # Plot smoothed transect and habitats in subplot 2
-        plt.subplot(212)
+        ax1 = plt.subplot(212)
         plt.plot(x_hdf5, \
             bathymetry_dataset_hdf5[transect, start_hdf5:end_hdf5], 'k')
 
@@ -525,7 +567,14 @@ def plot_transects(args):
         habitat_types = habitats_dataset_hdf5[transect, start_hdf5:end_hdf5]
         habitat_codes = numpy.unique(habitat_types)[1:]
 
+        handles = []
+        labels = []
         for habitat in habitat_codes:
+            habitat_name = unicodedata.normalize( \
+                'NFKD', \
+                field_indices['natural habitats'][str(habitat)]['name'] \
+                ).encode('ascii', 'ignore')
+
             habitat_ids = np.where(habitat_types == habitat)[0]
             habitats_dx = habitat_ids * dx_hdf5
             habitats_dx -= offshore_distance_hdf5
@@ -534,12 +583,44 @@ def plot_transects(args):
             habitats_bathy = habitats_bathy[habitat_ids]
 
             # Plot habitats and cycle through colors if too many habitats
-            plt.plot(habitats_dx, habitats_bathy, '.', \
-                c=RGB_color_map[(habitat + 2) % color_count])
+            handles.append(plt.plot(habitats_dx, habitats_bathy, '.', \
+                c=RGB_color_map[(habitat + 2) % color_count])[0])
+            labels.append(habitat_name)
 
-        plt.xlabel('Offshore distance (m)')
+        # Only plot the legend if there are habitats
+        if len(handles):
+            # Adjust font size w.r.t. number of habitats
+            if len(handles) < 6:
+                font_size = 'x-small'
+            else:
+                font_size = 'xx-small'
+
+            l = plt.legend(handles,  labels, loc=7, prop={'size':'xx-small'})
+            l.get_frame().set_alpha(0.4)
+
+
+        ax1.xaxis.set_ticks_position('bottom')
+        ax1.yaxis.set_ticks_position('left')
+
+        ax1.spines['right'].set_visible(False)
+        ax1.spines['top'].set_visible(False)
+
+        ax1.spines['bottom'].set_bounds(x_hdf5[0], x_hdf5[-1])
+        ax1.spines['left'].set_bounds( \
+            bathymetry_dataset_hdf5[transect, start_hdf5], \
+            bathymetry_dataset_hdf5[transect, end_hdf5-1])
+
+        ax1.add_line(Line2D([x_min_pos, x_max_pos], [0., 0.], c='k', ls=':'))
+
+        plt.xlabel('Seaward distance (m)')
         plt.ylabel('Elevation (m)')
         plt.title('Resampled shore profiles with habitats')
+
+        plt.xticks([x_min_pos, 0.0, x_max_pos], (x_min_label, '', x_max_label))
+        plt.yticks([y_min_pos, y_max_pos], (y_min_label, y_max_label))
+
+        plt.xlim((x_hdf5[0], x_hdf5[-1]))
+
 
         plt.savefig(os.path.join( \
             args['intermediate_dir'], 'profile_' + str(transect) + '.png'))
@@ -1874,9 +1955,7 @@ def compute_nearshore_and_wave_erosion(args):
     coordinates_limits = numpy.array((transect_length, 4))
 
     # Open field indices file, so that we can access a specific field by name
-    field_indices_uri = os.path.join(args['output_dir'], \
-        'habitat_field_indices.json')
-    field_indices = json.load(open(field_indices_uri)) # Open field indices info
+    field_indices = json.load(open(args['field_indices_uri'])) # Open field indices info
 
     # Field indices
     for habitat_type in field_indices:
