@@ -14,41 +14,41 @@ import fpformat, operator
 
 import CPf_SignalSmooth as SignalSmooth
 
-#warnings.filterwarnings('error', "invalid value encountered in divide")
 
 g=9.81
 
 def Fast_k(T,h):
-    if not (h >= 0.05).all():
-        too_shallow = np.where(h >= 0.05)
-        print('Some depths are too shallow in h of size', h.size)
-        for i in too_shallow:
-            print(i, h[i])
-
-    assert (h >= 0.05).all(), \
-        'Detected depths that are too shallow'
     g=9.81;
-
     if type(h) is list:
         h=array(h)
-
-    # Doesn't allow mu0 to be negative
-    muo=4.0*pi**2*h/(g*T**2)
-
-    expt=1.55+1.3*muo+0.216*muo**2
-    Term=1.0+muo**1.09*num.exp(-expt)
-    mu=muo*Term/num.sqrt(num.tanh(muo))
-
-    k=mu/h
-    n=.5*(1.0+(2.0*k*h/sinh(2.0*k*h)))
-    C=2*pi/T/k
-    Cg=C*n ; #Group velocity
-    
-    if type(n) is numpy.ndarray:
-        out=h<.05
-        k[out]=nan;C[out]=nan;Cg[out]=nan
+    else:
+        muo=4.0*pi**2*h/(g*T**2) 
+        expt=1.55+1.3*muo+0.216*muo**2
+        Term=1.0+muo**1.09*num.exp(-expt) 
+        mu=muo*Term/num.sqrt(num.tanh(muo))
+        k=mu/h 
+        n=.5*(1.0+(2.0*k*h/sinh(2.0*k*h)))
+        C=2*pi/T/k
+        Cg=C*n ; #Group velocity
+        
+        if type(n) is numpy.ndarray:
+            out=h<.05
+            k[out]=nan;C[out]=nan;Cg[out]=nan
         
     return k,C,Cg
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def Indexed(x,value): # locates index of point in vector x (type = num.array) that has closest value as variable value
     if isinstance(x,list):
@@ -807,7 +807,7 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
                 Sin12[xx+1]=0.00001;
         
             t[xx+1]=t[xx]+dx[xx]*Sin12[xx+1];
-            T[xx+1]=t[xx+1]**.3333;
+            #T[xx+1]=t[xx+1]**.3333;
             T[xx+1]=To;
             fp=1*1.0/T[xx+1];   
             k[xx+1],C[xx+1],Cg[xx+1]=Fast_k(To,h[xx+1])
@@ -827,7 +827,7 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
             Term[xx+1]=(T4[xx+1]+T5[xx+1]/num.sqrt(d1))*dd[xx+1]+T6[xx+1]*Sin12[xx+1];# Constants 
         
             #Other Diss. Terms    
-            Coral=find(Cf>0.01)
+         
             Gam=0.78;B=1;
             Db[xx]=(3.0/16)*num.sqrt(num.pi)*rho*g*(B**3)*fp*((H[xx]/num.sqrt(2))**7)/ ((Gam**4)*(h[xx]**5)); #Dissipation due to brkg    
             Df[xx]=1.0*rho*Cf[xx]/(16.0*num.sqrt(num.pi))*(2*num.pi*fp*(H[xx]/num.sqrt(2.0))/num.sinh(k[xx]*h[xx]))**3;#Diss due to bot friction 
@@ -851,17 +851,17 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
             Diss[xx+1]=Fact*(Db[xx]+Df[xx]+Dveg[xx]);
         
             Inet12=mean([Inet[xx],Inet[xx+1]]);
-        
+            
             Term12=mean([Term[xx],Term[xx+1]]);
             if Uo==0: 
-                Term12=0;
-                Inet12=0;
+                #Term12=0.00001;
+                Inet12=0.00001;
                 
             H2[xx+1]=H2[xx]+dx[xx]/(Cg[xx]*T[xx])*(Inet12-Diss[xx]-H2[xx]*Term12);
             if H2[xx+1]<0:
                 H2[xx+1]=1e-4;
             H[xx+1]=num.sqrt(H2[xx+1]);
-            Hmx[xx+1]=0.1*(2.0*pi/k[xx+1])*tanh(h[xx+1]*k[xx+1]);#Max wave height - Miche criterion
+            #Hmx[xx+1]=0.1*(2.0*pi/k[xx+1])*tanh(h[xx+1]*k[xx+1]);#Max wave height - Miche criterion
             #if H[xx+1]>Hmx[xx+1]:
                 #H[xx+1]=Hmx[xx+1]
     
@@ -886,13 +886,13 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
         else:
             Kt=1.0;
             
-        #Interpolate profile of wave height over reef
+        #Interpolate profile of wave height over oyster reef
         if Sr[xx+1]==3 and Kt<0.95:
             Hrf=array(H)
             Hrf[-1]=Hrf[-2];
             temp1=array(x);temp2=temp1.tolist()
             temp1= [ item for i,item in enumerate(temp1) if i not in ReefLoc ]
-            Hrf=[ item for i,item in enumerate(Hrf) if i not in ReefLoc ]
+            Hrf=[item for i,item in enumerate(Hrf) if i not in ReefLoc ]
             F=interp1d(temp1,Hrf);
             Hrf=F(temp2)
             H=array(Hrf)
@@ -911,58 +911,58 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
     fx=[-alphr[i]*Fxgr[i]-alpht[i]*Fxgt[i]-alphc[i]*Fxgc[i] for i in range(lx)] # scale by height of indiv. elements
     fx=SignalSmooth.smooth(num.array(fx),len(fx)*0.01,'hanning')     
     
-    # estimate MWS
+    # estimate MWS without the vegetation
     X=x;
-    dx=1;Xi=num.arange(X[0],X[-1]+dx,dx);lxi=len(Xi) # use smaller dx to get smoother result
-    F=interpolate.interp1d(X,ash);ashi=F(Xi);
-    F=interpolate.interp1d(X,k);ki=F(Xi);
-    F=interpolate.interp1d(X,Ew);Ewi=F(Xi);
-    F=interpolate.interp1d(X,Er);Eri=F(Xi);
-    F=interpolate.interp1d(X,fx);fxi=F(Xi);
-    Sxx=lxi*[0.0];Rxx=lxi*[0.0];Eta=lxi*[0.0];O=0;
     
+
+
+
+
+
+
+    Sxx=lx*[0.0];Rxx=lx*[0.0];Eta_nv=lx*[0.0];O=0;
     while O<8: # iterate until convergence of water level
-        hi=[ashi[i]+Eta[i] for i in range(lxi)] # water depth        
+        hi=[ash[i]+Eta_nv[i] for i in range(lx)] # water depth        
         
-        # Arbitrarily constrain hi to a minimum of -1 meter:
-        hi = numpy.maximum(hi, -1.)
+        Sxx=[0.5*Ew[i]*(4.0*k[i]*h[i]/num.sinh(2.0*k[i]*h[i])+1.0) for i in range(lx)] # wave radiation stress
+        
 
-        Rxx=[2.0*Eri[i] for i in range(lxi)] # roller radiation stress
+        Rxx=[2.0*Er[i] for i in range(lx)] # roller radiation stress
         # estimate MWL along Xshore transect
-        temp1=[Sxx[i]+Rxx[i] for i in range(lxi)]
+        temp1=[Sxx[i]+Rxx[i] for i in range(lx)]
         temp2=num.gradient(num.array(temp1),dx)
     
-        Integr=[(-temp2[i]+fxi[i])/(rho*g*hi[i]) for i in range(lxi)]
-        Eta[0]=Etao
-        Eta[1]=Eta[0]+Integr[0]*dx
-        for i in range(1,lxi-2):
-            Eta[i+1]=Eta[i-1]+Integr[i]*2*dx
-        Eta[lxi-1]=Eta[lxi-2]+Integr[lxi-1]*dx
-        O=O+1
-    F=interpolate.interp1d(Xi,Eta);Eta=F(X);
-    
-    #Rerun without the vegetation
-    Sxx=lxi*[0.0];Rxx=lxi*[0.0];Eta_nv=lxi*[0.0];O=0;
-    while O<8: # iterate until convergence of water level
-        hi=[ashi[i]+Eta_nv[i] for i in range(lxi)] # water depth        
-
-        # Arbitrarily constrain hi to a minimum of -1 meter:
-        hi = numpy.maximum(hi, -1.)
-
-        Sxx=[0.5*Ewi[i]*(4.0*ki[i]*hi[i]/num.sinh(2.0*ki[i]*hi[i])+1.0) for i in range(lxi)] # wave radiation stress
-        Rxx=[2.0*Eri[i] for i in range(lxi)] # roller radiation stress
-        # estimate MWL along Xshore transect
-        temp1=[Sxx[i]+Rxx[i] for i in range(lxi)]
-        temp2=num.gradient(num.array(temp1),dx)
-    
-        Integr=[(-temp2[i])/(rho*g*hi[i]) for i in range(lxi)]
+        Integr=[(-temp2[i])/(rho*g*h[i]) for i in range(lx)]
         Eta_nv[0]=Etao
         Eta_nv[1]=Eta[0]+Integr[0]*dx
-        for i in range(1,lxi-2):
+        for i in range(1,lx-2):
             Eta_nv[i+1]=Eta_nv[i-1]+Integr[i]*2*dx
-        Eta_nv[lxi-1]=Eta_nv[lxi-2]+Integr[lxi-1]*dx
+        Eta_nv[lx-1]=Eta_nv[lx-2]+Integr[lx-1]*dx
         O=O+1
-    F=interpolate.interp1d(Xi,Eta_nv);Eta_nv=F(X);
+        
+    
+    #Rerun with vegetation
+    temp=next((i for i, x in enumerate(Dveg) if x), None) #Check if there's vegetation
+    
+    if temp is not None: #There's vegetation. Compute MWL
+        Sxx=lx*[0.0];Rxx=lx*[0.0];Eta=lx*[0.0];O=0;
+        while O<8: # iterate until convergence of water level
+            hi=[ash[i]+Eta[i] for i in range(lxi)] # water depth        
+            Sxx=[0.5*Ew[i]*(4.0*k[i]*h[i]/num.sinh(2.0*k[i]*h[i])+1.0) for i in range(lxi)] # wave radiation stress
+            Rxx=[2.0*Er[i] for i in range(lx)] # roller radiation stress
+            # estimate MWL along Xshore transect
+            temp1=[Sxx[i]+Rxx[i] for i in range(lxi)]
+            temp2=num.gradient(num.array(temp1),dx)
+        
+            Integr=[(-temp2[i]+fx[i])/(rho*g*h[i]) for i in range(lx)]
+            Eta[0]=Etao
+            Eta[1]=Eta[0]+Integr[0]*dx
+            for i in range(1,lx-2):
+                Eta[i+1]=Eta[i-1]+Integr[i]*2*dx
+            Eta[lx-1]=Eta[lx-2]+Integr[lx-1]*dx
+            O=O+1
+    else:
+        Eta=[Eta_nv[ii] for ii in range(lx)]            
     
     Ubot=[num.pi*H[ii]/(To*num.sinh(k[ii]*h[ii])) for ii in range(lx)] # bottom velocity
     Ur=[(Ew[ii]+2.0*Er[ii])/(1024.0*h[ii]*C[ii])for ii in range(lx)] 

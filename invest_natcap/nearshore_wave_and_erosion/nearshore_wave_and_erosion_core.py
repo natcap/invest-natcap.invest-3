@@ -2182,6 +2182,7 @@ def compute_nearshore_and_wave_erosion(args):
                 
             #Compute Wave Height        
             Xnew=num.array(Xnew)
+
             H,Eta,Etanv,Ubot,Ur,Kt,Ic,Hm,other=WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar)
         
             #Compute maximum wave height
