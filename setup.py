@@ -287,6 +287,9 @@ setup(name='invest_natcap',
         Extension(
             name="scenic_quality_cython_core",
             sources=['invest_natcap/scenic_quality/scenic_quality_cython_core.pyx']),
+        Extension(
+            name="NearshoreWaveFunctions_cython_3p0",
+            sources=['invest_natcap/nearshore_wave_and_erosion/NearshoreWaveFunctions_cython_3p0.pyx']),
         ]),
       **py2exe_args)
 

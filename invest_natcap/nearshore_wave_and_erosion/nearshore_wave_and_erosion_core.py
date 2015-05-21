@@ -25,6 +25,8 @@ import pygeoprocessing
 import nearshore_wave_and_erosion_core as core
 
 from NearshoreWaveFunctions_3p0 import*
+import NearshoreWaveFunctions_cython_3p0 as NWF_cython
+
 import CPf_SignalSmooth as SignalSmooth
 
 logging.getLogger("pygeoprocessing").setLevel(logging.WARNING)
@@ -64,7 +66,13 @@ def execute(args):
     
     # Run the nearshore wave and erosion model
     if 'wave & erosion' in args['modules_to_run']:
-        compute_nearshore_and_wave_erosion(args)
+        #compute_nearshore_and_wave_erosion(args)
+
+    # Debug purposes
+        p = cProfile.Profile()
+        p.runctx('compute_nearshore_and_wave_erosion(args)', globals(), locals())
+        s = pstats.Stats(p)
+        s.sort_stats('time').print_stats(20)
 
         # Reconstruct 2D shore maps from biophysical data 
         reconstruct_2D_shore_map(args)
@@ -1984,7 +1992,7 @@ def compute_nearshore_and_wave_erosion(args):
     #Read data for each transect, one at a time
 #    for transect in range(2000, 2500): # Debug
     progress_step = max(transect_count / 39, 1)
-    for transect in range(transect_count): # Release
+    for transect in range(4): #transect_count): # Release
         print('transect', transect)
         if transect % progress_step == 0:
             print '.',
@@ -2183,7 +2191,7 @@ def compute_nearshore_and_wave_erosion(args):
             #Compute Wave Height        
             Xnew=num.array(Xnew)
 
-            H,Eta,Etanv,Ubot,Ur,Kt,Ic,Hm,other=WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar)
+            H,Eta,Etanv,Ubot,Ur,Kt,Ic,Hm,other=NWF_cython.WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar)
         
             #Compute maximum wave height
             bath_sm[bath_sm > -0.05] = -0.05

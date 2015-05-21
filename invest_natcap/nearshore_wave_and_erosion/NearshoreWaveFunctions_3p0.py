@@ -38,18 +38,6 @@ def Fast_k(T,h):
     return k,C,Cg
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def Indexed(x,value): # locates index of point in vector x (type = num.array) that has closest value as variable value
     if isinstance(x,list):
         x=num.array(x)        
@@ -913,13 +901,7 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
     
     # estimate MWS without the vegetation
     X=x;
-    
-
-
-
-
-
-
+    dx = 1
     Sxx=lx*[0.0];Rxx=lx*[0.0];Eta_nv=lx*[0.0];O=0;
     while O<8: # iterate until convergence of water level
         hi=[ash[i]+Eta_nv[i] for i in range(lx)] # water depth        
@@ -931,10 +913,10 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
         # estimate MWL along Xshore transect
         temp1=[Sxx[i]+Rxx[i] for i in range(lx)]
         temp2=num.gradient(num.array(temp1),dx)
-    
+        
         Integr=[(-temp2[i])/(rho*g*h[i]) for i in range(lx)]
         Eta_nv[0]=Etao
-        Eta_nv[1]=Eta[0]+Integr[0]*dx
+        Eta_nv[1]=Eta_nv[0]+Integr[0]*dx
         for i in range(1,lx-2):
             Eta_nv[i+1]=Eta_nv[i-1]+Integr[i]*2*dx
         Eta_nv[lx-1]=Eta_nv[lx-2]+Integr[lx-1]*dx
