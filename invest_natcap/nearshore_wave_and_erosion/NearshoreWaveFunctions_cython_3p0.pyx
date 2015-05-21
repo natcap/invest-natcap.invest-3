@@ -32,7 +32,7 @@ cdef extern from "stdlib.h":
 
 g=9.81
 
-def smooth(x,window_len=11,window='hanning'):
+def smooth(x,int window_len=11,window='hanning'):
     """smooth the data using a window with requested size.
     
     This method is based on the convolution of a scaled window with the signal.
