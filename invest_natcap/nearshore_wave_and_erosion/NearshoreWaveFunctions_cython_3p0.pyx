@@ -119,7 +119,12 @@ def gradient2(U,z):
     return dU
 #End of Gradient2
 
-def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
+def WaveRegenWindCD(num.ndarray[num.float64_t, ndim = 1] Xnew, \
+    num.ndarray[num.float64_t, ndim = 1] bath_sm, \
+    double Surge,double Ho, double To, double Uo, 
+    num.ndarray[num.float64_t, ndim = 1] Cf, 
+    num.ndarray[num.float64_t, ndim = 1] Sr,
+    PlantsPhysChar):
     # x: Vector of consecutive cross-shore positions going shoreward
     # h: Vector of water depths at the corresponding cross-shore position
     # Ho: Initial wave height to be applied at the first cross-shore position
@@ -129,11 +134,15 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
     # Canop: An num.array of physical properties (density, diameter, and height) of the mangrove canopy at the corresponding cross-shore position (all zeros if mangroves don't exist at that location)
     # ReefLof: Location of reef
     
-    
     # constants
-    g=9.81;rho=1024.0;B=1.0;Beta=0.05;
-    lxo=len(Xnew);dx=num.diff(Xnew);dx=abs(dx)
-    factor=3.0**(-2);
+    cdef double g=9.81
+    cdef double rho=1024.0
+    cdef double B=1.0
+    cdef double Beta=0.05
+    cdef int lxo=Xnew.size
+    cdef num.ndarray[num.float64_t, ndim = 1] dx=num.diff(Xnew)
+    dx=num.absolute(dx)
+    cdef double factor=3.0**(-2)
     
     #Compute wind reduction factor and reduce surge
     zo=num.zeros(lxo)
@@ -154,17 +163,18 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
         out=out[0]
     else:
         out=len(ho)
-    h=ho[0:out-1]
-    Xnew=num.array(Xnew)
-    x=Xnew[0:out-1];
-    lx=len(x)
+    cdef num.ndarray[num.float64_t, ndim = 1] h=ho[0:out-1]
+    cdef num.ndarray[num.float64_t, ndim = 1] x=Xnew[0:out-1]
+    cdef int lx=len(x)
     
     #Create wind vector
+    cdef double Cd_airsea, Zo_marine
+    cdef num.ndarray[num.float64_t, ndim = 1] Zo, fr, U, Ua
     if Uo<>0:
         Cd_airsea=(1.1+0.035*Uo)*1e-3;
-        Zo_marine=0.018*Cd_airsea*Uo**2*1.0/g;#Roughness water
-        Zo=[max(Zo_marine,zo[ii]-h[ii]/30) for ii in range(lx)] #Reduction in roughness b/c veg. underwater
-        Zo=num.array(Zo)
+        Zo_marine=0.018*Cd_airsea*Uo**2*1.0*g**-1;#Roughness water
+        Zo=num.array( \
+            [max(Zo_marine,zo[ii]-h[ii]/30) for ii in range(lx)]) #Reduction in roughness b/c veg. underwater
         fr=(Zo/Zo_marine)**0.0706*log(10*1.0/Zo)/log(10*1.0/Zo_marine);#Reduction factor
         U=fr*Uo;
     else:
@@ -173,26 +183,30 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
     
     # Vegetation characteristics
     Roots=PlantsPhysChar['Roots']
-    hRoots=Roots['RootHeight'];
-    NRoots=Roots['RootDens']
-    dRoots=Roots['RootDiam']
-    CdR=Roots['RootCd']
+    cdef num.ndarray[num.float64_t, ndim = 1] hRoots=Roots['RootHeight']
+    cdef num.ndarray[num.float64_t, ndim = 1] NRoots=Roots['RootDens']
+    cdef num.ndarray[num.float64_t, ndim = 1] dRoots=Roots['RootDiam']
+    cdef num.ndarray[num.float64_t, ndim = 1] CdR=Roots['RootCd']
     
     Trunks=PlantsPhysChar['Trunks']
-    hTrunk=Trunks['TrunkHeight'];
-    NTrunk=Trunks['TrunkDens']
-    dTrunk=Trunks['TrunkDiam']
-    CdT=Trunks['TrunkCd']
+    cdef num.ndarray[num.float64_t, ndim = 1] hTrunk=Trunks['TrunkHeight']
+    cdef num.ndarray[num.float64_t, ndim = 1] NTrunk=Trunks['TrunkDens']
+    cdef num.ndarray[num.float64_t, ndim = 1] dTrunk=Trunks['TrunkDiam']
+    cdef num.ndarray[num.float64_t, ndim = 1] CdT=Trunks['TrunkCd']
     
     Canop=PlantsPhysChar['Canops']
-    hCanop=Canop['CanopHeight'];
-    NCanop=Canop['CanopDens']
-    dCanop=Canop['CanopDiam']
-    CdC=Canop['CanopCd']
+    cdef num.ndarray[num.float64_t, ndim = 1] hCanop=Canop['CanopHeight']
+    cdef num.ndarray[num.float64_t, ndim = 1] NCanop=Canop['CanopDens']
+    cdef num.ndarray[num.float64_t, ndim = 1] dCanop=Canop['CanopDiam']
+    cdef num.ndarray[num.float64_t, ndim = 1] CdC=Canop['CanopCd']
     
     # create relative depth values for roots, trunk and canopy
+    cdef num.ndarray[num.float64_t, ndim = 1] alphr, alpht, alphc
+
     alphr=hRoots/ho;alpht=hTrunk/ho;alphc=hCanop/ho
-    for kk in range(lx): 
+#    for kk in range(lx): 
+    cdef int kk
+    for kk from 0 <= kk < lx by 1: 
         if alphr[kk]>1:
             alphr[kk]=1;alpht[kk]=0.000000001;alphc[kk]=0.00000001 # roots only
         elif alphr[kk]+alpht[kk]>1:
@@ -216,12 +230,16 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
     #----------------------------------------------------------------------------------------
     
     # Constants 
-    H=lx*[0.];Db=lx*[0.];Df=lx*[0.];Diss=lx*[0.];H2=lx*[0.];Dveg=lx*[0.];
-    C=lx*[0.];n=lx*[0.];Cg=lx*[0.];k=lx*[0.];L=lx*[0.];T=lx*[0.];Hmx=lx*[0.]
-    Er=lx*[0.];Br=lx*[0.]
+    cdef num.ndarray[num.float64_t, ndim = 1] H=lx*[0.], Db=lx*[0.], Df=lx*[0.]
+    cdef num.ndarray[num.float64_t, ndim = 1] Diss=lx*[0.], H2=lx*[0.]
+    Dveg=lx*[0.]     # Can't cythonize this, why?!?
+    cdef num.ndarray[num.float64_t, ndim = 1] C=lx*[0.], n=lx*[0.], Cg=lx*[0.]
+    cdef num.ndarray[num.float64_t, ndim = 1] k=lx*[0.], L=lx*[0.], T=lx*[0.]
+    cdef num.ndarray[num.float64_t, ndim = 1] Hmx=lx*[0.], Er=lx*[0.], Br=lx*[0.]
     
     #Forcing
-    Ho=float(Ho);To=float(To);Uo=float(Uo);Surge=float(Surge);Etao=0.0
+#    Ho=float(Ho);To=float(To);Uo=float(Uo);Surge=float(Surge)
+    Etao=0.0
     sig=2*num.pi/To;fp=1*1.0/To; # Wave period, frequency etc.
     ki,C[0],Cg[0]=Fast_k(To,h[0]) #Wave number, length, etc
     Li=2*num.pi/ki;Lo=g*To**2*1.0/(2*num.pi);
@@ -276,12 +294,15 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
         Inet[0]=0.00001
     
     Term[0]=(T4[0]+T5[0]/num.sqrt(d1))*dd[0]+T6[0]*Sin[0];# Constants 
-    kd=lx*[0.]
-    ping1=0;ping2=0;ping3=0;
+    cdef num.ndarray[num.float64_t, ndim = 1] kd=lx*[0.]
+    cdef int ping1=0, ping2=0, ping3=0
     
     #----------------------------------------------------------------------------------------
     # Begin wave model 
     #----------------------------------------------------------------------------------------
+    cdef int xx
+    cdef double Uxx, Uxx1
+
     for xx in range(lx-1) :#Transform waves, take MWL into account
         if h[xx]>.05: #make sure we don't compute waves in water deep enough
             
@@ -420,7 +441,7 @@ def   WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar):
     fx=smooth(num.array(fx),len(fx)*0.01,'hanning')     
     
     # estimate MWS without the vegetation
-    X=x;
+    cdef num.ndarray[num.float64_t, ndim = 1] X=x
     dx = 1   
 
 
