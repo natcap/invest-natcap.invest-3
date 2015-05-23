@@ -117,6 +117,8 @@ def gradient2(U,z):
     return dU
 #End of Gradient2
 
+@cython.cdivision(True)
+@cython.boundscheck(False)
 def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     num.ndarray[num.float64_t, ndim = 1] bath_sm, \
     long Surge,long Ho, long To, long Uo, 
@@ -133,7 +135,8 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     # ReefLof: Location of reef
     
     # constants
-    cdef double pi= num.pi 
+    cdef double pi= num.pi
+    cdef double sqrt_pi = sqrt(pi)
     cdef double g=9.81
     cdef double rho=1024.0
     cdef double B=1.0
@@ -262,7 +265,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     T[0]=To;
     
     #Rms wave height
-    temp1=2.0*pi/ki
+    cdef double temp1=2.0*pi/ki
     Hmx[0]=0.1*temp1*tanh(h[0]*ki);#Max wave height - Miche criterion
     if H[0]>Hmx[0]:
         H[0]=Hmx[0];
@@ -326,8 +329,11 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     # Begin wave model 
     #----------------------------------------------------------------------------------------
     cdef int xx
+    cdef num.ndarray[num.int64_t, ndim = 1] valid_xx
     cdef double Uxx, Uxx1, bt2, bh2, nut2, H_inf2, t_inf2
-
+    cdef double h_xx, k_xx, alphr_xx, alpht_xx, alphc_xx, CdDN
+    cdef double temp3, Fact, Inet12, Term12, H_inf12, nut_12, t_inf12
+    cdef num.ndarray[num.float64_t, ndim = 1] temp4
 
 
 #    for xx in range(lx-1) :#Transform waves, take MWL into account
@@ -337,16 +343,26 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
             
     for xx_index from 0 <= xx_index < valid_xx.size by 1:
         xx = valid_xx[xx_index]
+#        print(xx)
+#        print('1')
         #Determine wave period
         Uxx=Ua[xx] #wind speed
         Uxx1=Ua[xx+1]
         kd[xx]=k[xx]*h[xx]
-        if h[xx]>10:
+        
+        h_xx = h[xx]
+        H_xx = H[xx]
+        k_xx = k[xx]
+        alphr_xx = alphr[xx]
+        alpht_xx = alpht[xx]
+        alphc_xx = alphc[xx]
+
+        if h_xx>10:
             Uxx=0.00001
             Uxx1=0.00001
     
         d1=h[xx+1]
-        d2=h[xx];
+        d2=h_xx;
         bt1=tanh(gt*(g*d1*1.0/Uxx1**2)**0.375)
         bh1=tanh(gh*(g*d1*1.0/Uxx1**2)**0.75)
         nut1=(bh1*1.0/sigh)**2*(sigt/bt1)**3
@@ -364,8 +380,8 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         t_inf12= (t_inf1 + t_inf2) / 2.
     
         #Solve for Period T
-        if H[xx]<=H_inf12 and t[xx]<=t_inf12:
-            Sin12[xx+1]=CorrFact*(at*sigt)**3*1.0/g*(Uxx1*1.0/g)**factor*(1-(H[xx]/H_inf12)**2)**nut_12;
+        if H_xx<=H_inf12 and t[xx]<=t_inf12:
+            Sin12[xx+1]=CorrFact*(at*sigt)**3*1.0/g*(Uxx1*1.0/g)**factor*(1-(H_xx/H_inf12)**2)**nut_12;
         else:
             Sin12[xx+1]=0.00001;
     
@@ -378,12 +394,12 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         D=d1*1.0/Lo;lam=2*k[xx+1]*d1;
         T2[xx+1]=sqrt(Lo*D/(sinh(2*pi*D)*cosh(2*pi*D)**3));
         T3[xx+1]=tanh(2*pi*D)**.5*(1-2*pi*D/sinh(4*pi*D));
-        T4[xx+1]=2*pi*(1-lam*1*1.0/tanh(lam))/sinh(lam);
-        T5[xx+1]=pi/2*(1+lam**2*1*1.0/tanh(lam)/sinh(lam))*T2[xx+1];
-        T6[xx+1]=g/(6.0*pi*T[xx+1])*(1+lam**2*1.0/tanh(lam)/sinh(lam))*T3[xx+1];
+        T4[xx+1]=2*pi*(1-lam/tanh(lam))/sinh(lam);
+        T5[xx+1]=pi/2*(1+lam**2/tanh(lam)/sinh(lam))*T2[xx+1];
+        T6[xx+1]=g/(6.0*pi*T[xx+1])*(1+lam**2/tanh(lam)/sinh(lam))*T3[xx+1];
     
-        if H[xx]<=H_inf1 and t[xx+1]<=t_inf1:
-            Inet[xx+1]=(Cg[xx+1]*T[xx+1])*CorrFact*(sigh*ah*Uxx1)**2*1.0/g*(1-(H[xx]/H_inf1)**2)+H[xx]**2*T6[xx+1]*Sin12[xx+1];
+        if H_xx<=H_inf1 and t[xx+1]<=t_inf1:
+            Inet[xx+1]=(Cg[xx+1]*T[xx+1])*CorrFact*(sigh*ah*Uxx1)**2/g*(1-(H_xx/H_inf1)**2)+H_xx**2*T6[xx+1]*Sin12[xx+1];
         else:
             Inet[xx+1]=0.00001;
     
@@ -392,30 +408,31 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         #Other Diss. Terms    
      
         Gam=0.78;B=1;
-        Db[xx]=(3.0/16)*sqrt(pi)*rho*g*(B**3)*fp*((H[xx]/sqrt(2))**7)/ ((Gam**4)*(h[xx]**5)); #Dissipation due to brkg    
-        Df[xx]=1.0*rho*Cf[xx]/(16.0*sqrt(pi))*(2*pi*fp*(H[xx]/sqrt(2.0))/sinh(k[xx]*h[xx]))**3;#Diss due to bot friction 
+        Db[xx]=(3.0/16)*sqrt_pi*rho*g*(B**3)*fp*((H_xx/sqrt(2))**7)/ ((Gam**4)*(h_xx**5)); #Dissipation due to brkg    
+        Df[xx]=rho*Cf[xx]/(16.0*sqrt_pi)*(2*pi*fp*(H_xx/sqrt(2.0))/sinh(k_xx*h_xx))**3;#Diss due to bot friction 
     
+#        print('2')
         # dissipation due to vegetation
-        V1=3.0*sinh(k[xx]*alphr[xx]*h[xx])+sinh(k[xx]*alphr[xx]*h[xx])**3.0 # roots
-        V2=(3.0*sinh(k[xx]*(alphr[xx]+alpht[xx])*h[xx])-3.0*sinh(k[xx]*alphr[xx]*h[xx])+
-            sinh(k[xx]*(alphr[xx]+alpht[xx])*h[xx])**3.0-
-            sinh(k[xx]*alphr[xx]*h[xx])**3) # trunk
-        V3=(3.0*sinh(k[xx]*(alphr[xx]+alpht[xx]+alphc[xx])*h[xx])
-            -3.0*sinh(k[xx]*(alphr[xx]+alpht[xx])*h[xx])+
-            sinh(k[xx]*(alphr[xx]+alpht[xx]+alphc[xx])*h[xx])**3.0-
-            sinh(k[xx]*(alphr[xx]+alpht[xx])*h[xx])**3.0) # canopy
+        V1=3.0*sinh(k_xx*alphr_xx*h_xx)+sinh(k_xx*alphr_xx*h_xx)**3.0 # roots
+        V2=(3.0*sinh(k_xx*(alphr_xx+alpht_xx)*h_xx)-3.0*sinh(k_xx*alphr_xx*h_xx)+
+            sinh(k_xx*(alphr_xx+alpht_xx)*h_xx)**3.0-
+            sinh(k_xx*alphr_xx*h_xx)**3) # trunk
+        V3=(3.0*sinh(k_xx*(alphr_xx+alpht_xx+alphc_xx)*h_xx)
+            -3.0*sinh(k_xx*(alphr_xx+alpht_xx)*h_xx)+
+            sinh(k_xx*(alphr_xx+alpht_xx+alphc_xx)*h_xx)**3.0-
+            sinh(k_xx*(alphr_xx+alpht_xx)*h_xx)**3.0) # canopy
     
         CdDN=CdR[xx]*dRoots[xx]*NRoots[xx]*V1+CdT[xx]*dTrunk[xx]*NTrunk[xx]*V2+CdC[xx]*dCanop[xx]*NCanop[xx]*V3
-        temp1=rho*CdDN*(k[xx]*g/(2.0*sig))**3.0/(2.0*sqrt(pi))
-        temp3=(3.0*k[xx]*num.cosh(k[xx]*h[xx])**3)
-        Dveg[xx]=temp1*1.0/temp3*(H[xx]/sqrt(2.0))**3 # dissipation due to vegetation
+        temp1=rho*CdDN*(k_xx*g/(2.0*sig))**3.0/(2.0*sqrt_pi)
+        temp3=(3.0*k_xx*cosh(k_xx*h_xx)**3)
+        Dveg[xx]=temp1*1.0/temp3*(H_xx/sqrt(2.0))**3 # dissipation due to vegetation
     
-        Fact=16.0/(rho*g)*T[xx+1];
-        Diss[xx+1]=Fact*(Db[xx]+Df[xx]+Dveg[xx]);
+        Fact=16.0/(rho*g)*T[xx+1]
+        Diss[xx+1]=Fact*(Db[xx]+Df[xx]+Dveg[xx])
     
-        Inet12=mean([Inet[xx],Inet[xx+1]]);
-        
-        Term12=mean([Term[xx],Term[xx+1]]);
+        Inet12 = (Inet[xx]+Inet[xx+1])/2.
+        Term12 = (Term[xx]+Term[xx+1])/2.
+
         if Uo==0: 
             #Term12=0.00001;
             Inet12=0.00001;
@@ -428,8 +445,10 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         #if H[xx+1]>Hmx[xx+1]:
             #H[xx+1]=Hmx[xx+1]
 
+#        print('3')
         if Sr[xx+1]==3:
             if xx+1 in ReefLoc:
+                print('breakwater')
                 Rloc=ReefLoc[0]-1
                 Kt,wavepass,msgO,msgOf,ping1,ping2,ping3=BreakwaterKt(H[Rloc],To,hi,hc,Cw,Bw,case,ping1,ping2,ping3)
                 Kk.append(float(Kt))
@@ -440,14 +459,16 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         Er[xx+1]=Br[xx+1]/(C[xx+1]) # roller energy
     
     
+    print('4')
     #Art. reef transmission coefficient
-    if len(Kk)>0:
-        Kk=array(Kk)
+    if len(Kk):
+        Kk = num.array(Kk)
         Kt=mean(Kk)
+
         if Kt>0.98:
             Kt=1.0
     else:
-        Kt=1.0;
+        Kt=1.0
         
     #Interpolate profile of wave height over oyster reef
     if Sr[xx+1]==3 and Kt<0.95:
@@ -464,6 +485,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     Ew=lx*[0.0];Ew=[0.125*rho*g*(H[i]**2.0) for i in range(lx)] # energy density
     ash=array(h)
     
+    print('5')
     #-------------------------------------------------------------------------------------------------
     #Mean Water Level
     #-------------------------------------------------------------------------------------------------
@@ -486,9 +508,9 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
 
         Rxx=[2.0*Er[i] for i in range(lx)] # roller radiation stress
         # estimate MWL along Xshore transect
-        temp1=[Sxx[i]+Rxx[i] for i in range(lx)]
+        temp4=num.array([Sxx[i]+Rxx[i] for i in range(lx)])
         
-        temp2=num.gradient(num.array(temp1),dx[0])
+        temp2=num.gradient(num.array(temp4),dx[0])
     
         Integr=[(-temp2[i])/(rho*g*h[i]) for i in range(lx)]
         Eta_nv[0]=Etao
@@ -499,6 +521,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         O=O+1
         
     
+    print('6')
     #Rerun with vegetation
     temp=next((i for i, x in enumerate(Dveg) if x), None) #Check if there's vegetation
     
@@ -509,8 +532,8 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
             Sxx=[0.5*Ew[i]*(4.0*k[i]*h[i]/sinh(2.0*k[i]*h[i])+1.0) for i in range(lxi)] # wave radiation stress
             Rxx=[2.0*Er[i] for i in range(lx)] # roller radiation stress
             # estimate MWL along Xshore transect
-            temp1=[Sxx[i]+Rxx[i] for i in range(lxi)]
-            temp2=num.gradient(num.array(temp1),dx[0])
+            temp4=num.array([Sxx[i]+Rxx[i] for i in range(lxi)])
+            temp2=num.gradient(num.array(temp4),dx[0])
         
             Integr=[(-temp2[i]+fx[i])/(rho*g*h[i]) for i in range(lx)]
             Eta[0]=Etao
@@ -534,6 +557,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     Ur_[0:lx]=Ur;Ic_[0:lx]=Ic
     Ubot_[0:lx]=Ubot;Kt_[0:lx]=Kt
     other=[0.1*(2.0*pi/k[ii])*tanh((h[ii])*k[ii]) for ii in range(len(k))]
+    print('done')
     
     return H_,Eta_,Eta_nv_,Ubot_,Ur_,Kt_,Ic_,Hmx,other # returns: wave height, wave setup, wave height w/o veg., wave setup w/o veg, wave dissipation, bottom wave orbital velocity over the cross-shore domain
         #End of WaveRegen
