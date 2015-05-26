@@ -2109,7 +2109,7 @@ def compute_nearshore_and_wave_erosion(args):
 #            print('soil types', numpy.unique(soil_types)) #, soil_types)
             
             #Prepare to run the model
-            dx=20;
+            dx=1 #20;
             smoothing_pct=10.0
             smoothing_pct=smoothing_pct/100;
             
@@ -2118,10 +2118,8 @@ def compute_nearshore_and_wave_erosion(args):
             Xnew=range(0,Xold[-1]+1)
             length=len(Xnew)
 
-            fintp=interpolate.interp1d(Xold,bathymetry, kind='linear')
-            bath=fintp(Xnew)
-            bath_sm=SignalSmooth.smooth(bath,len(bath)*smoothing_pct,'hanning') 
-            shore=Indexed(bath_sm,0) #Locate zero in the new vector
+            bath_sm=bathymetry.astype(num.float64)
+            shore=shore_dataset[transect]
             
             fintp=interpolate.interp1d(Xold,RootDiam, kind='nearest')
             RtDiam=fintp(Xnew)
@@ -2151,8 +2149,7 @@ def compute_nearshore_and_wave_erosion(args):
             CpCd=fintp(Xnew)
         
             hab_types[hab_types==nodata]=-1
-            fintp=interpolate.interp1d(Xold,hab_types, kind='nearest')
-            Sr=fintp(Xnew)
+            Sr=hab_types.astype(num.int64)
             
             #Check to see if we need to flip the data
             flip=0

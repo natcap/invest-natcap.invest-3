@@ -90,6 +90,7 @@ def smooth(x,int window_len=11,window='hanning'):
         w=eval('numpy.'+window+'(window_len)')
 
     y=numpy.convolve(w/w.sum(),s,mode='same')
+    
     return y[window_len:-window_len+1]
 
 
@@ -123,7 +124,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     num.ndarray[num.float64_t, ndim = 1] bath_sm, \
     long Surge,long Ho, long To, long Uo, 
     num.ndarray[num.float64_t, ndim = 1] Cf, 
-    num.ndarray[num.float64_t, ndim = 1] Sr,
+    num.ndarray[num.int64_t, ndim = 1] Sr,
     PlantsPhysChar):
     # x: Vector of consecutive cross-shore positions going shoreward
     # h: Vector of water depths at the corresponding cross-shore position
@@ -534,7 +535,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
             # estimate MWL along Xshore transect
             temp4=num.array([Sxx[i]+Rxx[i] for i in range(lxi)])
             temp2=num.gradient(num.array(temp4),dx[0])
-        
+
             Integr=[(-temp2[i]+fx[i])/(rho*g*h[i]) for i in range(lx)]
             Eta[0]=Etao
             Eta[1]=Eta[0]+Integr[0]*dx[0]
@@ -544,11 +545,11 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
             O=O+1
     else:
         Eta=[Eta_nv[ii] for ii in range(lx)]            
-    
+
     Ubot=[pi*H[ii]/(To*sinh(k[ii]*h[ii])) for ii in range(lx)] # bottom velocity
     Ur=[(Ew[ii]+2.0*Er[ii])/(1024.0*h[ii]*C[ii])for ii in range(lx)] 
     Ic=[Ew[ii]*Cg[ii]*Ur[ii]/Ubot[ii] for ii in range(lx)]
-    
+
     H_=num.zeros(lxo)+nan;Eta_=num.zeros(lxo)+nan
     Eta_nv_=num.zeros(lxo)+nan
     Ur_=num.zeros(lxo)+nan;Ic_=num.zeros(lxo)+nan
@@ -558,7 +559,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     Ubot_[0:lx]=Ubot;Kt_[0:lx]=Kt
     other=[0.1*(2.0*pi/k[ii])*tanh((h[ii])*k[ii]) for ii in range(len(k))]
     print('done')
-    
+
     return H_,Eta_,Eta_nv_,Ubot_,Ur_,Kt_,Ic_,Hmx,other # returns: wave height, wave setup, wave height w/o veg., wave setup w/o veg, wave dissipation, bottom wave orbital velocity over the cross-shore domain
         #End of WaveRegen
 
