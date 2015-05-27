@@ -460,7 +460,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         Er[xx+1]=Br[xx+1]/(C[xx+1]) # roller energy
     
     
-    print('4')
+#    print('4')
     #Art. reef transmission coefficient
     if len(Kk):
         Kk = num.array(Kk)
@@ -486,7 +486,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     Ew=lx*[0.0];Ew=[0.125*rho*g*(H[i]**2.0) for i in range(lx)] # energy density
     ash=array(h)
     
-    print('5')
+#    print('5')
     #-------------------------------------------------------------------------------------------------
     #Mean Water Level
     #-------------------------------------------------------------------------------------------------
@@ -522,18 +522,18 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         O=O+1
         
     
-    print('6')
+#    print('6')
     #Rerun with vegetation
     temp=next((i for i, x in enumerate(Dveg) if x), None) #Check if there's vegetation
     
     if temp is not None: #There's vegetation. Compute MWL
         Sxx=lx*[0.0];Rxx=lx*[0.0];Eta=lx*[0.0];O=0;
         while O<8: # iterate until convergence of water level
-            hi=[ash[i]+Eta[i] for i in range(lxi)] # water depth        
-            Sxx=[0.5*Ew[i]*(4.0*k[i]*h[i]/sinh(2.0*k[i]*h[i])+1.0) for i in range(lxi)] # wave radiation stress
+            hi=[ash[i]+Eta[i] for i in range(lx)] # water depth        
+            Sxx=[0.5*Ew[i]*(4.0*k[i]*h[i]/sinh(2.0*k[i]*h[i])+1.0) for i in range(lx)] # wave radiation stress
             Rxx=[2.0*Er[i] for i in range(lx)] # roller radiation stress
             # estimate MWL along Xshore transect
-            temp4=num.array([Sxx[i]+Rxx[i] for i in range(lxi)])
+            temp4=num.array([Sxx[i]+Rxx[i] for i in range(lx)])
             temp2=num.gradient(num.array(temp4),dx[0])
 
             Integr=[(-temp2[i]+fx[i])/(rho*g*h[i]) for i in range(lx)]
@@ -558,7 +558,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     Ur_[0:lx]=Ur;Ic_[0:lx]=Ic
     Ubot_[0:lx]=Ubot;Kt_[0:lx]=Kt
     other=[0.1*(2.0*pi/k[ii])*tanh((h[ii])*k[ii]) for ii in range(len(k))]
-    print('done')
+#    print('done')
 
     return H_,Eta_,Eta_nv_,Ubot_,Ur_,Kt_,Ic_,Hmx,other # returns: wave height, wave setup, wave height w/o veg., wave setup w/o veg, wave dissipation, bottom wave orbital velocity over the cross-shore domain
         #End of WaveRegen

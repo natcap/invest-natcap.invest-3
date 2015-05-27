@@ -1992,8 +1992,8 @@ def compute_nearshore_and_wave_erosion(args):
     #Read data for each transect, one at a time
 #    for transect in range(2000, 2500): # Debug
     progress_step = max(transect_count / 39, 1)
-    for transect in range(4): #transect_count): # Release
-        print('transect', transect)
+    for transect in range(transect_count): # Release
+#        print('transect', transect)
         if transect % progress_step == 0:
             print '.',
 #        print('')
@@ -2190,6 +2190,7 @@ def compute_nearshore_and_wave_erosion(args):
 
             H,Eta,Etanv,Ubot,Ur,Kt,Ic,Hm,other = \
             NWF_cython.WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar)
+            #WaveRegenWindCD(Xnew,bath_sm,Surge,Ho,To,Uo,Cf,Sr,PlantsPhysChar)
         
             #Compute maximum wave height
             bath_sm[bath_sm > -0.05] = -0.05
