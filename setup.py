@@ -109,6 +109,7 @@ packages = [
     'invest_natcap.sdr',
     'invest_natcap.habitat_suitability',
     'invest_natcap.seasonal_water_yield',
+    'invest_natcap.globio',
 ]
 
 def get_iui_resource_data_files(lib_path):
@@ -185,6 +186,7 @@ if platform.system() == 'Windows':
          'invest_sdr.py',
          'invest_habitat_suitability.py',
          'invest_seasonal_water_yield.py',
+         'invest_globio.py',
         ]
 
     from py2exe.build_exe import py2exe as py2exeCommand
