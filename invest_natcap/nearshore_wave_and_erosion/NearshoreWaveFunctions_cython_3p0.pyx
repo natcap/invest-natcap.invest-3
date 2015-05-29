@@ -27,6 +27,7 @@ from libc.math cimport sinh
 from libc.math cimport cosh
 from libc.math cimport tanh
 from libc.math cimport sqrt
+from libc.math cimport pow
 from libc.math cimport log
 from libc.math cimport exp
 
@@ -138,6 +139,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     # constants
     cdef double pi= num.pi
     cdef double sqrt_pi = sqrt(pi)
+    cdef double sqrt_2 = sqrt(2.), inv_sqrt_2 = 1. / sqrt_2
     cdef double g=9.81
     cdef double rho=1024.0
     cdef double B=1.0
@@ -204,9 +206,9 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     cdef num.ndarray[num.float64_t, ndim = 1] CdC=Canop['CanopCd']
     
     # create relative depth values for roots, trunk and canopy
-    cdef num.ndarray[num.float64_t, ndim = 1] alphr, alpht, alphc
-
-    alphr=hRoots/ho;alpht=hTrunk/ho;alphc=hCanop/ho
+    cdef num.ndarray[num.float64_t, ndim = 1] alphr=hRoots/ho
+    cdef num.ndarray[num.float64_t, ndim = 1] alpht=hTrunk/ho
+    cdef num.ndarray[num.float64_t, ndim = 1] alphc=hCanop/ho
 #    for kk in range(lx): 
     cdef int kk
     for kk from 0 <= kk < lx by 1: 
@@ -225,7 +227,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         Bw=ArtReefP[2]
         Cw=ArtReefP[3]
         ReefType=ArtReefP[4]
-        hi=mean(h[ReefLoc])
+        h_mean=mean(h[ReefLoc])
         case='main'
     
     #----------------------------------------------------------------------------------------
@@ -239,6 +241,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     cdef num.ndarray[num.float64_t, ndim = 1] Diss=num.zeros(lx) 
     cdef num.ndarray[num.float64_t, ndim = 1] H2=num.zeros(lx)
     Dveg=num.zeros(lx) # Can't cythonize this, why?!?
+    cdef num.ndarray[num.float64_t, ndim = 1] D_veg = Dveg
     cdef num.ndarray[num.float64_t, ndim = 1] C=num.zeros(lx)
     cdef num.ndarray[num.float64_t, ndim = 1] n=num.zeros(lx)
     cdef num.ndarray[num.float64_t, ndim = 1] Cg=num.zeros(lx)
@@ -273,7 +276,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     
     #Wave and roller energy
     Db[0]=0.00001;Df[0]=0.00001;Diss[0]=0.00001; #Dissipation due to brkg,bottom friction and vegetation
-    Dveg[0]=0.00001;Er[0]=0.00001;Br[0]=0.00001;
+    D_veg[0]=0.00001;Er[0]=0.00001;Br[0]=0.00001;
     
     #Whafis terms
     cdef double CorrFact=0.8 #Correction for estimating tanh as exp.
@@ -329,23 +332,32 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
     #----------------------------------------------------------------------------------------
     # Begin wave model 
     #----------------------------------------------------------------------------------------
-    cdef int xx
+    cdef int i, xx, xx_index, valid_xx_size
     cdef num.ndarray[num.int64_t, ndim = 1] valid_xx
-    cdef double Uxx, Uxx1, bt2, bh2, nut2, H_inf2, t_inf2
-    cdef double h_xx, k_xx, alphr_xx, alpht_xx, alphc_xx, CdDN
-    cdef double temp3, Fact, Inet12, Term12, H_inf12, nut_12, t_inf12
-    cdef num.ndarray[num.float64_t, ndim = 1] temp4
+    cdef num.ndarray[num.float64_t, ndim = 1] Fxgr=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] Fxgt=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] Fxgc=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] fx=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] ash
+    cdef double Uxx, Uxx1, bt2, bh2, nut2, H_inf2, t_inf2 
+    cdef double H_xx, h_xx, k_xx, alphr_xx, alpht_xx, alphc_xx, CdDN
+    cdef double temp3, Fact, Inet12, Term12, H_inf12, nut_12, t_inf12, cst
+    cdef num.ndarray[num.float64_t, ndim = 1] temp4=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] temp2=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] Ew=num.zeros(lx)
 
 
 #    for xx in range(lx-1) :#Transform waves, take MWL into account
 #        if h[xx]>.05: #make sure we don't compute waves in water deep enough
 
     valid_xx = np.where(h[range(lx-1)]>.05)[0]
+    valid_xx_size = valid_xx.size
             
-    for xx_index from 0 <= xx_index < valid_xx.size by 1:
+#    print '1',
+    
+    for xx_index from 0 <= xx_index < valid_xx_size by 1:
         xx = valid_xx[xx_index]
 #        print(xx)
-#        print('1')
         #Determine wave period
         Uxx=Ua[xx] #wind speed
         Uxx1=Ua[xx+1]
@@ -412,7 +424,6 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         Db[xx]=(3.0/16)*sqrt_pi*rho*g*(B**3)*fp*((H_xx/sqrt(2))**7)/ ((Gam**4)*(h_xx**5)); #Dissipation due to brkg    
         Df[xx]=rho*Cf[xx]/(16.0*sqrt_pi)*(2*pi*fp*(H_xx/sqrt(2.0))/sinh(k_xx*h_xx))**3;#Diss due to bot friction 
     
-#        print('2')
         # dissipation due to vegetation
         V1=3.0*sinh(k_xx*alphr_xx*h_xx)+sinh(k_xx*alphr_xx*h_xx)**3.0 # roots
         V2=(3.0*sinh(k_xx*(alphr_xx+alpht_xx)*h_xx)-3.0*sinh(k_xx*alphr_xx*h_xx)+
@@ -426,10 +437,10 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         CdDN=CdR[xx]*dRoots[xx]*NRoots[xx]*V1+CdT[xx]*dTrunk[xx]*NTrunk[xx]*V2+CdC[xx]*dCanop[xx]*NCanop[xx]*V3
         temp1=rho*CdDN*(k_xx*g/(2.0*sig))**3.0/(2.0*sqrt_pi)
         temp3=(3.0*k_xx*cosh(k_xx*h_xx)**3)
-        Dveg[xx]=temp1*1.0/temp3*(H_xx/sqrt(2.0))**3 # dissipation due to vegetation
+        D_veg[xx]=temp1/temp3*(H_xx/sqrt_2)**3.0 # dissipation due to vegetation
     
         Fact=16.0/(rho*g)*T[xx+1]
-        Diss[xx+1]=Fact*(Db[xx]+Df[xx]+Dveg[xx])
+        Diss[xx+1]=Fact*(Db[xx]+Df[xx]+D_veg[xx])
     
         Inet12 = (Inet[xx]+Inet[xx+1])/2.
         Term12 = (Term[xx]+Term[xx+1])/2.
@@ -446,12 +457,12 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         #if H[xx+1]>Hmx[xx+1]:
             #H[xx+1]=Hmx[xx+1]
 
-#        print('3')
         if Sr[xx+1]==3:
             if xx+1 in ReefLoc:
                 print('breakwater')
                 Rloc=ReefLoc[0]-1
-                Kt,wavepass,msgO,msgOf,ping1,ping2,ping3=BreakwaterKt(H[Rloc],To,hi,hc,Cw,Bw,case,ping1,ping2,ping3)
+                Kt, wavepass, msgO, msgOf, ping1, ping2, ping3 = \
+                    BreakwaterKt(H[Rloc],To,h_mean,hc,Cw,Bw,case,ping1,ping2,ping3)
                 Kk.append(float(Kt))
                 H[xx+1]=Kt*H[Rloc]
                 H2[xx+1]=H[xx+1]**2.0
@@ -460,7 +471,7 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         Er[xx+1]=Br[xx+1]/(C[xx+1]) # roller energy
     
     
-#    print('4')
+#    print '2',
     #Art. reef transmission coefficient
     if len(Kk):
         Kk = num.array(Kk)
@@ -483,68 +494,114 @@ def WaveRegenWindCD(num.ndarray[num.int64_t, ndim = 1] Xnew, \
         H=array(Hrf)
         
     H=smooth(num.array(H),len(H)*0.01,'hanning')             
-    Ew=lx*[0.0];Ew=[0.125*rho*g*(H[i]**2.0) for i in range(lx)] # energy density
-    ash=array(h)
+
+    # energy density
+    for i in range(lx):
+        Ew[i]=0.125*rho*g*(H[i]**2.0)
+
+    ash=num.copy(h)
     
-#    print('5')
+#    print '3',
     #-------------------------------------------------------------------------------------------------
     #Mean Water Level
     #-------------------------------------------------------------------------------------------------
     # force on plants if they were emergent; take a portion if plants occupy only portion of wc
-    Fxgr=[rho*g*CdR[i]*dRoots[i]*NRoots[i]*H[i]**3.0*k[i]/(12.0*pi*tanh(k[i]*ash[i])) for i in range(lx)]
-    Fxgt=[rho*g*CdT[i]*dTrunk[i]*NTrunk[i]*H[i]**3.0*k[i]/(12.0*pi*tanh(k[i]*ash[i])) for i in range(lx)]
-    Fxgc=[rho*g*CdC[i]*dCanop[i]*NCanop[i]*H[i]**3.0*k[i]/(12.0*pi*tanh(k[i]*ash[i])) for i in range(lx)]
-    fx=[-alphr[i]*Fxgr[i]-alpht[i]*Fxgt[i]-alphc[i]*Fxgc[i] for i in range(lx)] # scale by height of indiv. elements
+    
+    # Original code:
+#    Fxgr=num.array([rho*g*CdR[i]*dRoots[i]*NRoots[i]*H[i]**3.0*k[i]/(12.0*pi*tanh(k[i]*ash[i])) for i in range(lx)])
+#    Fxgt=num.array([rho*g*CdT[i]*dTrunk[i]*NTrunk[i]*H[i]**3.0*k[i]/(12.0*pi*tanh(k[i]*ash[i])) for i in range(lx)])
+#    Fxgc=num.array([rho*g*CdC[i]*dCanop[i]*NCanop[i]*H[i]**3.0*k[i]/(12.0*pi*tanh(k[i]*ash[i])) for i in range(lx)])
+#    fx=num.array([-alphr[i]*Fxgr[i]-alpht[i]*Fxgt[i]-alphc[i]*Fxgc[i] for i in range(lx)]) # scale by height of indiv. elements
+
+    # New code:
+    for i from 0 <= i < lx by 1:
+        cst = H[i]**3.0*k[i]/(12.0*pi*tanh(k[i]*ash[i]))
+
+        Fxgr[i]=rho*g*CdR[i]*dRoots[i]*NRoots[i]*cst
+        Fxgt[i]=rho*g*CdT[i]*dTrunk[i]*NTrunk[i]*cst
+        Fxgc[i]=rho*g*CdC[i]*dCanop[i]*NCanop[i]*cst
+
+        fx[i]=-alphr[i]*Fxgr[i]-alpht[i]*Fxgt[i]-alphc[i]*Fxgc[i] # scale by height of indiv. elements
+    
     fx=smooth(num.array(fx),len(fx)*0.01,'hanning')     
     
-    # estimate MWS without the vegetation
+
     dx[0] = 1   
+    cdef num.ndarray[num.float64_t, ndim = 1] Sxx=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] Rxx=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] Eta_nv=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] Eta=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] Integr=num.zeros(lx)
+    cdef num.ndarray[num.float64_t, ndim = 1] hi=num.zeros(lx)
 
-    Sxx=lx*[0.0];Rxx=lx*[0.0];Eta_nv=lx*[0.0];O=0;
+    # estimate MWS without the vegetation
+    cdef int O=0
+
+    hi=ash+Eta_nv # water depth        
+
     while O<8: # iterate until convergence of water level
-        hi=[ash[i]+Eta_nv[i] for i in range(lx)] # water depth        
         
-        Sxx=[0.5*Ew[i]*(4.0*k[i]*h[i]/sinh(2.0*k[i]*h[i])+1.0) for i in range(lx)] # wave radiation stress
+        for i in range(lx):
+            # wave radiation stress
+            Sxx[i]=0.5*Ew[i]*(4.0*k[i]*h[i]/sinh(2.0*k[i]*h[i])+1.0)
+            # roller radiation stress
+            Rxx[i]=2.0*Er[i]        
+            # estimate MWL along Xshore transect
+            temp4[i]=Sxx[i]+Rxx[i]
         
-
-        Rxx=[2.0*Er[i] for i in range(lx)] # roller radiation stress
-        # estimate MWL along Xshore transect
-        temp4=num.array([Sxx[i]+Rxx[i] for i in range(lx)])
-        
-        temp2=num.gradient(num.array(temp4),dx[0])
+        temp2=num.gradient(temp4,dx[0])
     
-        Integr=[(-temp2[i])/(rho*g*h[i]) for i in range(lx)]
+        
+        for i in range(lx):
+            Integr[i]=-temp2[i]/(rho*g*h[i])
+        
         Eta_nv[0]=Etao
         Eta_nv[1]=Eta_nv[0]+Integr[0]*dx[0]
+        
         for i in range(1,lx-2):
             Eta_nv[i+1]=Eta_nv[i-1]+Integr[i]*2*dx[0]
+        
         Eta_nv[lx-1]=Eta_nv[lx-2]+Integr[lx-1]*dx[0]
+        
         O=O+1
         
     
-#    print('6')
+#    print '4'
     #Rerun with vegetation
     temp=next((i for i, x in enumerate(Dveg) if x), None) #Check if there's vegetation
     
     if temp is not None: #There's vegetation. Compute MWL
-        Sxx=lx*[0.0];Rxx=lx*[0.0];Eta=lx*[0.0];O=0;
-        while O<8: # iterate until convergence of water level
-            hi=[ash[i]+Eta[i] for i in range(lx)] # water depth        
-            Sxx=[0.5*Ew[i]*(4.0*k[i]*h[i]/sinh(2.0*k[i]*h[i])+1.0) for i in range(lx)] # wave radiation stress
-            Rxx=[2.0*Er[i] for i in range(lx)] # roller radiation stress
-            # estimate MWL along Xshore transect
-            temp4=num.array([Sxx[i]+Rxx[i] for i in range(lx)])
-            temp2=num.gradient(num.array(temp4),dx[0])
+        Sxx=num.zeros(lx)
+        Rxx=num.zeros(lx)
+        Eta=num.zeros(lx)
+        O=0
 
-            Integr=[(-temp2[i]+fx[i])/(rho*g*h[i]) for i in range(lx)]
+        while O<8: # iterate until convergence of water level
+            for i in range(lx):
+                # wave radiation stress
+                Sxx[i]=0.5*Ew[i]*(4.0*k[i]*h[i]/sinh(2.0*k[i]*h[i])+1.0)
+                # roller radiation stress
+                Rxx[i]=2.0*Er[i]
+                # estimate MWL along Xshore transect
+                temp4[i]=Sxx[i]+Rxx[i]
+
+            temp2=num.gradient(temp4,dx[0])
+
+            for i in range(lx):
+                Integr[i]=(-temp2[i]+fx[i])/(rho*g*h[i])
+            
             Eta[0]=Etao
             Eta[1]=Eta[0]+Integr[0]*dx[0]
+            
             for i in range(1,lx-2):
                 Eta[i+1]=Eta[i-1]+Integr[i]*2*dx[0]
+            
             Eta[lx-1]=Eta[lx-2]+Integr[lx-1]*dx[0]
+            
             O=O+1
     else:
-        Eta=[Eta_nv[ii] for ii in range(lx)]            
+        for i in range(lx):
+            Eta[i]=Eta_nv[i]            
 
     Ubot=[pi*H[ii]/(To*sinh(k[ii]*h[ii])) for ii in range(lx)] # bottom velocity
     Ur=[(Ew[ii]+2.0*Er[ii])/(1024.0*h[ii]*C[ii])for ii in range(lx)] 
