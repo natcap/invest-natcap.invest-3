@@ -1728,8 +1728,9 @@ def export_transect_coordinates_to_CSV(transect_data_uri):
 
 
     # Extract transect position
+    print('available entries:', transect_data_file.keys())
     shore_id_dataset = transect_data_file['shore_index']
-    xy_positions_dataset = transect_data_file['xy_positions']
+    xy_positions_dataset = transect_data_file[u'xy_positions']
 
     # First and last indices of the valid transect points (that are not nodata)
     limit_group = transect_data_file['limits']
