@@ -14,6 +14,7 @@ import codecs
 import errno
 import tempfile
 from types import StringType
+import locale
 
 import invest_natcap
 import invest_natcap.iui
@@ -319,6 +320,7 @@ class Executor(threading.Thread):
             ('OS', platform.platform()),
             ('Processor architecture', platform.machine()),
             ('FS encoding', sys.getfilesystemencoding()),
+            ('Preferred encoding', locale.getpreferredencoding()),
         ]
 
         python_details = [
