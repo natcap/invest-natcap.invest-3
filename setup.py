@@ -183,7 +183,7 @@ if platform.system() == 'Windows':
          'invest_scenario_generator.py',
          'invest_scenic_quality.py',
          'routedem.py',
-         'delineateit.py'
+         'delineateit.py',
          'invest_sdr.py',
          'invest_habitat_suitability.py',
          'invest_seasonal_water_yield.py',
