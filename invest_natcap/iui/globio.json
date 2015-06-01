@@ -37,7 +37,7 @@
           "id": "aoi_uri",
           "args_id": "aoi_uri",
           "type": "file",
-          "label": "AOI (Shapefile)",
+          "label": "AOI (Shapefile) (optional)",
           "defaultValue": "",
           "required": false,
           "validateAs": {
@@ -64,7 +64,9 @@
           "required": true,
           "validateAs": {
             "type": "GDAL"
-          }
+          },
+          ,
+          "helpText": "A raster with landcover IDs that are to be mapped to GLOBIO ids."
         },
         {
           "id": "lulc_to_globio_table_uri",
@@ -85,7 +87,8 @@
           "type": "folder",
           "label": "Infrastructure Directory",
           "defaultValue": "../infrastructure_dir",
-          "required": true
+          "required": true,
+          "helpText": "A directory containing projected rasters or shapefiles that represent infrastructure in the area."
         },
         {
           "id": "cropland",
