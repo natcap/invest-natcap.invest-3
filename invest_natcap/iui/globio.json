@@ -116,7 +116,7 @@
           "args_id": "potential_vegetation_uri",
           "type": "file",
           "label": "Potential Vegetation (Raster)",
-          "defaultValue": ".../globio/input/potential_vegetation.tif",
+          "defaultValue": "../globio/input/potential_vegetation.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
