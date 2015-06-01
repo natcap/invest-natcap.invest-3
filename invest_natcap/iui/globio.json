@@ -65,7 +65,6 @@
           "validateAs": {
             "type": "GDAL"
           },
-          ,
           "helpText": "A raster with landcover IDs that are to be mapped to GLOBIO ids."
         },
         {
