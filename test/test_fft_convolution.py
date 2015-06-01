@@ -7,8 +7,7 @@ import numpy
 import numpy.fft
 import scipy.ndimage.morphology
 
-
-from invest_natcap import raster_utils
+from pygeoprocessing import geoprocessing as raster_utils
 
 def make_distance_kernel(max_distance):
     kernel_size = max_distance * 2 + 1
