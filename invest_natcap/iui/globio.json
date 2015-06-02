@@ -88,17 +88,6 @@
           "required": true
         },
         {
-          "id": "cropland",
-          "args_id": "cropland_uri",
-          "type": "file",
-          "label": "Cropland (Raster)",
-          "defaultValue": "",
-          "required": false,
-          "validateAs": {
-            "type": "GDAL"
-          }
-        },
-        {
           "id": "pasture_uri",
           "args_id": "pasture_uri",
           "type": "file",
