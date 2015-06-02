@@ -67,6 +67,7 @@
             "fieldsExist": ["lucode", "globio_lucode"]
           },
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields.",
+          "defaultValue": "../globio/input/lulc_conversion_table.csv",
           "disabledBy": "predefined_globio"
         },
         {
@@ -79,6 +80,7 @@
           "validateAs": {
             "type": "GDAL"
           },
+          "defaultValue": "../globio/input/lulc_2008.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -86,7 +88,7 @@
           "args_id": "infrastructure_dir",
           "type": "folder",
           "label": "Infrastructure Directory",
-          "defaultValue": "../infrastructure_dir",
+          "defaultValue": "../globio/input/infrastructure_dir",
           "required": true
         },
         {
@@ -99,6 +101,7 @@
           "validateAs": {
             "type": "GDAL"
           },
+          "defaultValue": "../globio/input/pasture.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -111,6 +114,7 @@
           "validateAs": {
             "type": "GDAL"
           },
+          "defaultValue": "../globio/input/potential_vegetation.tif",
           "disabledBy": "predefined_globio"
         },
         {
@@ -123,6 +127,7 @@
           "validateAs": {
             "type": "GDAL"
           },
+          "defaultValue": "../globio/input/sum_yieldgap.tif",
           "disabledBy": "predefined_globio"
         },
         {
