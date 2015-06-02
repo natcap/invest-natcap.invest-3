@@ -26,14 +26,14 @@ def execute(args):
 
     pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
 
-    if args['reclassify_land_use']:
+    if not args['predefined_globio']:
         out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
             args['lulc_uri'])
     else:
         out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
-            args['globio_uri'])
+            args['globio_lulc_uri'])
 
-    if args['reclassify_land_use']:
+    if not args['predefined_globio']:
         #reclassify the landcover map
         lulc_to_globio_table = pygeoprocessing.geoprocessing.get_lookup_from_table(
             args['lulc_to_globio_table_uri'], 'lucode')
@@ -175,6 +175,7 @@ def execute(args):
     else:
         LOGGER.info('no need to calcualte GLOBIO LULC because it is passed in')
         globio_lulc_uri = args['globio_lulc_uri']
+        globio_nodata = pygeoprocessing.get_nodata_from_uri(globio_lulc_uri)
 
         #smoothed natural areas are natural areas run through a gaussian filter
         natural_areas_uri = os.path.join(
@@ -185,7 +186,9 @@ def execute(args):
             """masking out natural areas"""
             nodata_mask = lulc_array == globio_nodata
             result = (
-                (lulc_array == 130) | (lulc_array == 1))
+                numpy.in1d(lulc_array.flatten(), [1, 2, 3, 4]).reshape(
+                    nodata_mask.shape))
+                #(lulc_array == 130) | (lulc_array == 1))
             return numpy.where(nodata_mask, natural_areas_nodata, result)
 
         LOGGER.info("create mask of natural areas")
@@ -301,8 +304,6 @@ def execute(args):
     infrastructure_nodata = -1
     infrastructure_uri = os.path.join(
         args['workspace_dir'], 'combined_infrastructure%s.tif' % file_suffix)
-    out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
-        args['lulc_uri'])
 
     def collapse_infrastructure_op(*infrastructure_array_list):
         """Combines all input infrastructure into a single map where if any

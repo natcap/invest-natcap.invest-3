@@ -56,17 +56,30 @@
           }
         },
         {
-          "id": "globio_land_use",
-          "args_id": "globio_lulc_uri",
+          "id": "lulc_to_globio_table_uri",
+          "args_id": "lulc_to_globio_table_uri",
           "type": "file",
-          "label": "GLOBIO Classified Land Use (Raster)",
+          "label": "Landcover to GLOBIO Landcover Table (CSV)",
+          "defaultValue": "",
+          "required": true,
+          "validateAs": {
+            "type": "CSV",
+            "fieldsExist": ["lucode", "globio_lucode"]
+          },
+          "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields.",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "land_use",
+          "args_id": "lulc_uri",
+          "type": "file",
+          "label": "Land Use/Cover (Raster)",
           "defaultValue": "",
           "required": true,
           "validateAs": {
             "type": "GDAL"
           },
-          "disabledBy": "reclassify_land_use",
-          "helpText": "A landcover map that is pre-classified into known GLOBIO landcover ids."
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "infrastructure_dir",
@@ -85,7 +98,8 @@
           "required": true,
           "validateAs": {
             "type": "GDAL"
-          }
+          },
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "potential_vegetation_uri",
@@ -96,7 +110,8 @@
           "required": true,
           "validateAs": {
             "type": "GDAL"
-          }
+          },
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "sum_yieldgap_uri",
@@ -107,7 +122,8 @@
           "required": true,
           "validateAs": {
             "type": "GDAL"
-          }
+          },
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "high_intensity_agriculture_threshold",
@@ -116,7 +132,8 @@
           "label": "High Intensity Agriculture Threshold",
           "defaultValue": "1.0",
           "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$"
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "pasture_threshold",
@@ -125,7 +142,8 @@
           "label": "Pasture Threshold",
           "defaultValue": "0.5",
           "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$"
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "yieldgap_threshold",
@@ -134,7 +152,8 @@
           "label": "Yieldgap Threshold",
           "defaultValue": "0.456804906897",
           "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$"
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "primary_threshold",
@@ -143,7 +162,8 @@
           "label": "Primary Threshold",
           "defaultValue": "0.66",
           "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$"
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
         },
         {
           "id": "secondary_threshold",
@@ -152,40 +172,28 @@
           "label": "Secondary Threshold",
           "defaultValue": "0.33",
           "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$"
+          "validText": "^[0-9]+\\.?[0-9]*$",
+          "disabledBy": "predefined_globio"
         }
       ]
     },
     {
-      "id": "reclassify_land_use",
-      "args_id": "reclassify_land_use",
-      "label": "Reclassify land use map to GLOBIO",
+      "id": "predefined_globio",
+      "args_id": "predefined_globio",
+      "label": "Predefined land use map for GLOBIO",
       "type": "container",
       "defaultValue": false,
       "collapsible": true,
       "elements": [
         {
-          "id": "reclassify_land_use_list",
+          "id": "predefined_globio_land_use_list",
           "type": "list",
           "elements": [
             {
-              "id": "lulc_to_globio_table_uri",
-              "args_id": "lulc_to_globio_table_uri",
+              "id": "globio_land_use",
+              "args_id": "globio_lulc_uri",
               "type": "file",
-              "label": "Landcover to GLOBIO Landcover Table (CSV)",
-              "defaultValue": "",
-              "required": true,
-              "validateAs": {
-                "type": "CSV",
-                "fieldsExist": ["lucode", "globio_lucode"]
-              },
-              "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
-            },
-            {
-              "id": "land_use",
-              "args_id": "lulc_uri",
-              "type": "file",
-              "label": "Land Use/Cover (Raster)",
+              "label": "GLOBIO Classified Land Use (Raster)",
               "defaultValue": "",
               "required": true,
               "validateAs": {
