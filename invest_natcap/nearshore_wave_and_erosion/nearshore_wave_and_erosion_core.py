@@ -60,7 +60,7 @@ def execute(args):
     
     # Run the profile generator
     if 'Profile generator' in args['modules_to_run']: 
-        #compute_transects(args)
+        compute_transects(args)
         export_transect_coordinates_to_CSV(args['transect_data_uri'])
         plot_transects(args)
     
@@ -1407,8 +1407,8 @@ def compute_transects(args):
 
     # We're done, we close the files
     #os.remove(tiff_transect_data_uri)
-    transect_data_file_tiff.close()
-    transect_data_file_hdf5.close()
+    #transect_data_file_tiff.close()
+    #transect_data_file_hdf5.close()
 
     return args['transect_data_uri']
     
