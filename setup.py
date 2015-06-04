@@ -80,6 +80,7 @@ packages = [
     'invest_natcap',
     'invest_natcap.crop_production',
     'invest_natcap.carbon',
+    'invest_natcap.carbon_edge_effect',
     'invest_natcap.dbfpy',
     'invest_natcap.hydropower',
     'invest_natcap.iui',
@@ -157,6 +158,7 @@ if platform.system() == 'Windows':
     py2exe_args['console'] = \
         ['invest_crop_production.py',
          'invest_carbon.py',
+         'invest_carbon_edge_effect.py'
          'invest_wave_energy.py',
          'invest_hra.py',
          'invest_hra_preprocessor.py',

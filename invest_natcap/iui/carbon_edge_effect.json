@@ -2,9 +2,9 @@
   "id": "window",
   "label": "Carbon Edge Effect Model",
   "targetScript": "invest_natcap.carbon_edge_effect.carbon_edge_effect",
-  "modelName": "sdr",
+  "modelName": "carbon_edge_effect",
   "localDocURI": "../documentation/carbon_edge_effect.html",
-  "height": 575,
+  "height": 300,
   "width": 700,
   "elements": [
     {
@@ -56,8 +56,8 @@
             "type": "CSV",
             "fieldsExist": [
               "lucode",
-              "usle_c",
-              "usle_p"
+              "is_forest",
+              "c_above"
             ]
           },
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields."
