@@ -2,6 +2,7 @@
 
 import os
 
+import numpy
 import gdal
 import pygeoprocessing
 
@@ -30,8 +31,12 @@ def execute(args):
         args['biophysical_table_uri'], 'lucode')
 
     lucode_to_carbon = {}
+    forest_codes = []
     for lucode in biophysical_table:
         try:
+            is_forest = int(biophysical_table[int(lucode)]['is_forest'])
+            if is_forest == 1:
+                forest_codes.append(lucode)
             lucode_to_carbon[int(lucode)] = float(
                 biophysical_table[lucode]['c_above'])
         except ValueError:
@@ -48,6 +53,23 @@ def execute(args):
         gdal.GDT_Float32, carbon_map_nodata)
 
     #TASK: map distance to edge
+    forest_mask_uri = os.path.join(
+        args['workspace_dir'], 'forest_mask%s.tif' % file_suffix)
+    forest_mask_nodata = -1
+    lulc_nodata = pygeoprocessing.get_nodata_from_uri(args['lulc_uri'])
+    out_pixel_size = pygeoprocessing.get_cell_size_from_uri(args['lulc_uri'])
+    def mask_forest_op(lulc_array):
+        """converts forest lulc codes to 1"""
+        forest_mask = numpy.in1d(lulc_array.flatten(), forest_codes).reshape(
+            lulc_array.shape)
+        nodata_mask = lulc_array == lulc_nodata
+        return numpy.where(nodata_mask, forest_mask_nodata, forest_mask)
+    pygeoprocessing.vectorize_datasets(
+        [args['lulc_uri']], mask_forest_op,
+        forest_mask_uri, gdal.GDT_Byte, forest_mask_nodata, out_pixel_size,
+        "intersection", vectorize_op=False)
+
+
     #TASK: map aboveground carbon from table to lulc that is not forest
     #TASK: combine maps into output
     carbon_map_uri = os.path.join(
