@@ -110,7 +110,6 @@ def execute(args):
         pasture_threshold = float(args['pasture_threshold'])
         yieldgap_threshold = float(args['yieldgap_threshold'])
         primary_threshold = float(args['primary_threshold'])
-        secondary_threshold = float(args['secondary_threshold'])
 
         sum_yieldgap_nodata = pygeoprocessing.geoprocessing.get_nodata_from_uri(
             args['sum_yieldgap_uri'])
@@ -136,15 +135,16 @@ def execute(args):
                 lulc_array == 132.0, high_low_intensity_agriculture, lulc_array)
             nodata_mask = nodata_mask | (lulc_array == globio_nodata)
 
-            #Step 1.3a: Split Scrublands and grasslands into pristine vegetations,
-            #livestock grazing areas, and man-made pastures.
+            #Step 1.3a: Split Scrublands and grasslands into pristine
+            #vegetations, livestock grazing areas, and man-made pastures.
             three_types_of_scrubland = numpy.where(
                 (potential_vegetation_array <= 8) & (lulc_ag_split == 131), 6.0,
                 5.0)
 
             three_types_of_scrubland = numpy.where(
                 (three_types_of_scrubland == 5.0) &
-                (pasture_array < pasture_threshold), 1.0, three_types_of_scrubland)
+                (pasture_array < pasture_threshold), 1.0,
+                three_types_of_scrubland)
 
             #Step 1.3b: Stamp ag_split classes onto input LULC
             broad_lulc_shrub_split = numpy.where(
@@ -167,8 +167,8 @@ def execute(args):
         LOGGER.info('create the globio lulc')
         pygeoprocessing.geoprocessing.vectorize_datasets(
             [intermediate_globio_lulc_uri, sum_yieldgap_uri,
-             potential_vegetation_uri, pasture_uri, ffqi_uri], create_globio_lulc,
-            globio_lulc_uri, gdal.GDT_Int32, globio_nodata,
+             potential_vegetation_uri, pasture_uri, ffqi_uri],
+            create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32, globio_nodata,
             out_pixel_size, "intersection", dataset_to_align_index=0,
             assert_datasets_projected=False, vectorize_op=False)
     else:
@@ -176,56 +176,8 @@ def execute(args):
         globio_lulc_uri = args['globio_lulc_uri']
         globio_nodata = pygeoprocessing.get_nodata_from_uri(globio_lulc_uri)
 
-        #smoothed natural areas are natural areas run through a gaussian filter
-        natural_areas_uri = os.path.join(
-            args['workspace_dir'], 'natural_areas%s.tif' % file_suffix)
-        natural_areas_nodata = -1
 
-        def natural_area_mask_op(lulc_array):
-            """masking out natural areas"""
-            nodata_mask = lulc_array == globio_nodata
-            result = (
-                numpy.in1d(lulc_array.flatten(), [1, 2, 3, 4]).reshape(
-                    nodata_mask.shape))
-                #(lulc_array == 130) | (lulc_array == 1))
-            return numpy.where(nodata_mask, natural_areas_nodata, result)
-
-        LOGGER.info("create mask of natural areas")
-        pygeoprocessing.geoprocessing.vectorize_datasets(
-            [globio_lulc_uri], natural_area_mask_op,
-            natural_areas_uri, gdal.GDT_Int32, natural_areas_nodata,
-            out_pixel_size, "intersection", dataset_to_align_index=0,
-            assert_datasets_projected=False, vectorize_op=False)
-
-        LOGGER.info('gaussian filter natural areas')
-        sigma = 9.0
-        gaussian_kernel_uri = os.path.join(
-            args['workspace_dir'], 'gaussian_kernel%s.tif' % file_suffix)
-        make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
-        smoothed_natural_areas_uri = os.path.join(
-            args['workspace_dir'], 'smoothed_natural_areas%s.tif' % file_suffix)
-        pygeoprocessing.geoprocessing.convolve_2d_uri(
-            natural_areas_uri, gaussian_kernel_uri, smoothed_natural_areas_uri)
-
-        ffqi_uri = os.path.join(
-            args['workspace_dir'], 'ffqi%s.tif' % file_suffix)
-
-        def ffqi_op(natural_areas_array, smoothed_natural_areas):
-            """mask out ffqi only where there's an ffqi"""
-            return numpy.where(
-                natural_areas_array != natural_areas_nodata,
-                natural_areas_array * smoothed_natural_areas,
-                natural_areas_nodata)
-
-        LOGGER.info('calculate ffqi')
-        pygeoprocessing.geoprocessing.vectorize_datasets(
-            [natural_areas_uri, smoothed_natural_areas_uri], ffqi_op,
-            ffqi_uri, gdal.GDT_Float32, natural_areas_nodata,
-            out_pixel_size, "intersection", dataset_to_align_index=0,
-            assert_datasets_projected=False, vectorize_op=False)
-
-
-    """
+    """This is from Justin's old code:
     #Step 1.2b: Assign high/low according to threshold based on yieldgap.
     #high_low_intensity_agriculture_uri = args["export_folder"]+"high_low_intensity_agriculture_"+args['run_id']+".tif"
     high_intensity_agriculture_threshold = 1 #hardcode for now until UI is determined. Eventually this is a user input. Do I bring it into the ARGS dict?
@@ -334,20 +286,65 @@ def execute(args):
         assert_datasets_projected=False, vectorize_op=False)
 
     #calc_msa_f
-    msa_nodata = -1
-    def msa_f_op(ffqi):
-        """calcualte msa fragmentation"""
-        nodata_mask = natural_areas_nodata == ffqi
+    primary_veg_mask_uri = os.path.join(
+        args['workspace_dir'], 'primary_veg_mask%s.tif' % file_suffix)
+    primary_veg_mask_nodata = -1
 
-        msa_f = numpy.empty(ffqi.shape)
+    def primary_veg_mask_op(lulc_array):
+        """masking out natural areas"""
+        nodata_mask = lulc_array == globio_nodata
+        result = (lulc_array == 1)
+        return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
+
+    LOGGER.info("create mask of primary veg areas")
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [globio_lulc_uri], primary_veg_mask_op,
+        primary_veg_mask_uri, gdal.GDT_Int32, primary_veg_mask_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        assert_datasets_projected=False, vectorize_op=False)
+
+    LOGGER.info('gaussian filter primary veg')
+    sigma = 9.0
+    gaussian_kernel_uri = os.path.join(
+        args['workspace_dir'], 'gaussian_kernel%s.tif' % file_suffix)
+    make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
+    smoothed_primary_veg_mask_uri = os.path.join(
+        args['workspace_dir'], 'smoothed_primary_veg_mask%s.tif' % file_suffix)
+    pygeoprocessing.geoprocessing.convolve_2d_uri(
+        primary_veg_mask_uri, gaussian_kernel_uri, smoothed_primary_veg_mask_uri)
+
+    primary_veg_smooth_uri = os.path.join(
+        args['workspace_dir'], 'ffqi%s.tif' % file_suffix)
+
+    def primary_veg_smooth_op(primary_veg_mask_array, smoothed_primary_veg_mask):
+        """mask out ffqi only where there's an ffqi"""
+        return numpy.where(
+            primary_veg_mask_array != primary_veg_mask_nodata,
+            primary_veg_mask_array * smoothed_primary_veg_mask,
+            primary_veg_mask_nodata)
+
+    LOGGER.info('calculate primary_veg_smooth')
+    pygeoprocessing.geoprocessing.vectorize_datasets(
+        [primary_veg_mask_uri, smoothed_primary_veg_mask_uri],
+        primary_veg_smooth_op, primary_veg_smooth_uri, gdal.GDT_Float32,
+        primary_veg_mask_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, assert_datasets_projected=False,
+        vectorize_op=False)
+
+    msa_nodata = -1
+    def msa_f_op(primary_veg_smooth):
+        """calcualte msa fragmentation"""
+        nodata_mask = primary_veg_mask_nodata == primary_veg_smooth
+
+        msa_f = numpy.empty(primary_veg_smooth.shape)
         msa_f[:] = 1.0
         #These thresholds come from FFQI from Justin's code; I don't
         #know where they otherwise came from.
-        msa_f[(ffqi > .9825) & (ffqi <= .9984)] = 0.95
-        msa_f[(ffqi > .89771) & (ffqi <= .9825)] = 0.90
-        msa_f[(ffqi > .578512) & (ffqi <= .89771)] = 0.7
-        msa_f[(ffqi > .42877) & (ffqi <= .578512)] = 0.6
-        msa_f[(ffqi <= .42877)] = 0.3
+        msa_f[(primary_veg_smooth > .9825) & (primary_veg_smooth <= .9984)] = 0.95
+        msa_f[(primary_veg_smooth > .89771) & (primary_veg_smooth <= .9825)] = 0.90
+        msa_f[(primary_veg_smooth > .578512) & (primary_veg_smooth <= .89771)] = 0.7
+        msa_f[(primary_veg_smooth > .42877) & (primary_veg_smooth <= .578512)] = 0.6
+        msa_f[(primary_veg_smooth <= .42877)] = 0.3
         msa_f[nodata_mask] = msa_nodata
 
         return msa_f
@@ -355,8 +352,8 @@ def execute(args):
     LOGGER.info('calculate msa_f')
     msa_f_uri = os.path.join(args['workspace_dir'], 'msa_f%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.vectorize_datasets(
-        [ffqi_uri], msa_f_op, msa_f_uri, gdal.GDT_Float32, msa_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
+        [primary_veg_smooth_uri], msa_f_op, msa_f_uri, gdal.GDT_Float32,
+        msa_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
         assert_datasets_projected=False, vectorize_op=False)
 
     #calc_msa_i
