@@ -4,6 +4,7 @@ import psycopg2
 import logging
 import json
 import recreation_server_core as rs_core
+import string
 
 
 def loggify(string):
@@ -199,6 +200,7 @@ def execute(args):
         ignore_columns = ["cell", "cellarea", "id"]
         for column_name in ignore_columns:
             grid_predictors.discard(column_name)
+        grid_predictors = map(string.lower, grid_predictors)
         grid_predictors = list(grid_predictors)
         LOGGER.debug("Grid contains the following columns: %s",
                      loggify(str(grid_predictors)))
@@ -231,7 +233,7 @@ def execute(args):
                         user_class_dict[file_stem] = classes
                         for predictor in classes.keys():
                             try:
-                                grid_predictors.index(predictor)
+                                grid_predictors.index(predictor.lower())
                                 LOGGER.info("Found simple predictor %s in %s.",
                                             predictor,
                                             file_stem)
@@ -259,7 +261,7 @@ def execute(args):
                     else:
                         LOGGER.info("Found simple predictor %s.", file_stem)
                         try:
-                            grid_predictors.index(file_stem)
+                            grid_predictors.index(file_stem.lower())
                             LOGGER.debug("Found predictor %s in grid.",
                                          file_stem)
                             LOGGER.info(
@@ -278,10 +280,10 @@ def execute(args):
                     LOGGER.debug("Found category table %s without shapefile.",
                                  file_stem)
                     try:
-                        simple_predictors.index(file_stem)
+                        simple_predictors.index(file_stem.lower())
                         try:
                             #this should never be reached, right?
-                            grid_predictors.index(file_stem)
+                            grid_predictors.index(file_stem.lower())
                             LOGGER.info(
                                 "Adding simple predictor %s to processing queue.",
                                 file_stem)
@@ -301,7 +303,7 @@ def execute(args):
                             user_class_dict[file_stem] = classes
                             for predictor in classes.keys():
                                 try:
-                                    grid_predictors.index(predictor)
+                                    grid_predictors.index(predictor.lower())
                                     LOGGER.info(
                                         "Found simple predictor %s in %s.",
                                         predictor, file_stem)
