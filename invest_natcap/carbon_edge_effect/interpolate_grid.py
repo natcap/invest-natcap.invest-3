@@ -8,6 +8,7 @@ import ogr
 import osr
 import pygeoprocessing
 import numpy
+import scipy
 
 def main():
     """main entry point"""
@@ -62,6 +63,7 @@ def main():
     ds_geotransform = raster_ds.GetGeoTransform()
     print ds_geotransform
     point_list = []
+    value_list = []
     for grid_id in regression_table:
         grid_coords = coord_trans.TransformPoint(
             regression_table[grid_id]['meanlon'],
@@ -73,8 +75,9 @@ def main():
         grid_row = (grid_coords[1] - ds_geotransform[3]) / ds_geotransform[5]
 
         point_list.append([grid_col, grid_row])
+        value_list.append(grid_id)
         if grid_col >= 0 and grid_col < raster_ds.RasterXSize and grid_row >= 0 and grid_row < raster_ds.RasterYSize:
-            print grid_col, grid_row
+            print grid_col, grid_row, grid_id
         # Get the output Layer's Feature Definition
         feature_def = grid_points_layer.GetLayerDefn()
         grid_point_feature = ogr.Feature(feature_def)
@@ -90,7 +93,24 @@ def main():
 
     print numpy.array(point_list)
 
-    #scipy.interpolate.griddata(points, values, xi, method='linear', fill_value=nan)[source]
+    block_row_size = 256
+    block_col_size = 256
+    n_rows_blocks = 1
+    n_cols_blocks = 1
+    for block_row in xrange(n_rows_blocks):
+        for block_col in xrange(n_cols_blocks):
+            xi = []
+            for local_row_index in xrange(block_row_size):
+                for local_col_index in xrange(block_col_size):
+                    xi.append((
+                        block_col * block_col_size + local_col_index,
+                        block_row * block_row_size + local_row_index))
+
+            grid = scipy.interpolate.griddata(
+                numpy.array(point_list),
+                numpy.array(value_list),
+                numpy.array(xi), method='nearest', fill_value=-1)
+            print grid
 
     #import scipy
     #scipy.interpolate.griddata(points, values, xi, method='linear', fill_value=nan)[source]
