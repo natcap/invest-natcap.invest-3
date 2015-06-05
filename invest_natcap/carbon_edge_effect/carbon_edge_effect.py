@@ -74,6 +74,8 @@ def execute(args):
     pygeoprocessing.distance_transform_edt(
         forest_mask_uri, edge_distance_uri, process_pool=None)
 
+    #TASK rasterize points into a raster!
+
     #TASK: combine maps into output
     carbon_map_uri = os.path.join(
         args['workspace_dir'], 'carbon_map%s.tif' % file_suffix)
