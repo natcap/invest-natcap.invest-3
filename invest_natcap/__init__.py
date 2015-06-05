@@ -13,18 +13,6 @@ import distutils.version
 import build_utils
 
 try:
-    import pygeoprocessing
-    REQUIRED_PYGEOPROCESSING_VERSION = '0.2.2'
-    if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
-            distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
-        raise Exception(
-            "Requires PyGeoprocessing version at least %s.  "
-            "Current version %s ",
-            REQUIRED_PYGEOPROCESSING_VERSION, pygeoprocessing.__version__)
-except ImportError:
-    pass
-
-try:
     __version__ = build_utils.invest_version()
 except:
     __version__ = 'dev'
@@ -97,6 +85,7 @@ def log_model(model_name, model_version=None):
             'release': platform.release(),
             'full_platform_string': platform.platform(),
             'fs_encoding': sys.getfilesystemencoding(),
+            'preferred_encoding': locale.getdefaultlocale()[1],
             'default_language': locale.getdefaultlocale()[0],
             'python': {
                 'version': platform.python_version(),

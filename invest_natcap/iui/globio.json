@@ -37,7 +37,7 @@
           "id": "aoi_uri",
           "args_id": "aoi_uri",
           "type": "file",
-          "label": "AOI (Shapefile)",
+          "label": "AOI (Shapefile) (optional)",
           "defaultValue": "",
           "required": false,
           "validateAs": {
@@ -60,7 +60,7 @@
           "args_id": "lulc_to_globio_table_uri",
           "type": "file",
           "label": "Landcover to GLOBIO Landcover Table (CSV)",
-          "defaultValue": "",
+          "defaultValue": "../globio/input/lulc_conversion_table.csv",
           "required": true,
           "validateAs": {
             "type": "CSV",
@@ -96,7 +96,7 @@
           "args_id": "pasture_uri",
           "type": "file",
           "label": "Pasture (Raster)",
-          "defaultValue": "",
+          "defaultValue": "../globio/input/pasture.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -109,7 +109,7 @@
           "args_id": "potential_vegetation_uri",
           "type": "file",
           "label": "Potential Vegetation (Raster)",
-          "defaultValue": "",
+          "defaultValue": "../globio/input/potential_vegetation.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"
@@ -122,7 +122,7 @@
           "args_id": "sum_yieldgap_uri",
           "type": "file",
           "label": "Sum Yieldgap (Raster)",
-          "defaultValue": "",
+          "defaultValue": "../globio/input/sum_yieldgap.tif",
           "required": true,
           "validateAs": {
             "type": "GDAL"

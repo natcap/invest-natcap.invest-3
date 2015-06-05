@@ -183,6 +183,7 @@ if platform.system() == 'Windows':
          'invest_scenario_generator.py',
          'invest_scenic_quality.py',
          'routedem.py',
+         'delineateit.py',
          'invest_sdr.py',
          'invest_habitat_suitability.py',
          'invest_seasonal_water_yield.py',
@@ -292,7 +293,7 @@ REQUIRES_LIST = [
     'cython (>=0.19.1)',
     'scipy (>=0.12.0)',
     'osgeo (>=1.9.2)',
-    'pygeoprocessing (>=0.2.1)',
+    'pygeoprocessing (>=0.3.0a2)',
     ]
 
 #The standard distutils setup command
