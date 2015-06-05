@@ -54,20 +54,24 @@ def execute(args):
 
     #TASK: map distance to edge
     forest_mask_uri = os.path.join(
-        args['workspace_dir'], 'forest_mask%s.tif' % file_suffix)
-    forest_mask_nodata = -1
+        args['workspace_dir'], 'non_forest_mask%s.tif' % file_suffix)
+    forest_mask_nodata = 255
     lulc_nodata = pygeoprocessing.get_nodata_from_uri(args['lulc_uri'])
     out_pixel_size = pygeoprocessing.get_cell_size_from_uri(args['lulc_uri'])
-    def mask_forest_op(lulc_array):
+    def mask_non_forest_op(lulc_array):
         """converts forest lulc codes to 1"""
-        forest_mask = numpy.in1d(lulc_array.flatten(), forest_codes).reshape(
+        forest_mask = ~numpy.in1d(lulc_array.flatten(), forest_codes).reshape(
             lulc_array.shape)
         nodata_mask = lulc_array == lulc_nodata
         return numpy.where(nodata_mask, forest_mask_nodata, forest_mask)
     pygeoprocessing.vectorize_datasets(
-        [args['lulc_uri']], mask_forest_op,
-        forest_mask_uri, gdal.GDT_Byte, forest_mask_nodata, out_pixel_size,
-        "intersection", vectorize_op=False)
+        [args['lulc_uri']], mask_non_forest_op, forest_mask_uri, gdal.GDT_Byte,
+        forest_mask_nodata, out_pixel_size, "intersection", vectorize_op=False)
+
+    edge_distance_uri = os.path.join(
+        args['workspace_dir'], 'edge_distance%s.tif' % file_suffix)
+    pygeoprocessing.distance_transform_edt(
+        forest_mask_uri, edge_distance_uri, process_pool=None)
 
 
     #TASK: map aboveground carbon from table to lulc that is not forest
