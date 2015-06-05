@@ -26,6 +26,7 @@ def execute(args):
         file_suffix = ''
 
     #TASK: (optional) clip dataset to AOI if it exists
+
     #TASK: classify forest pixels from lulc
     biophysical_table = pygeoprocessing.get_lookup_from_table(
         args['biophysical_table_uri'], 'lucode')
@@ -44,10 +45,10 @@ def execute(args):
             #because of forest
             lucode_to_carbon[int(lucode)] = 0.0
 
+    #TASK: map aboveground carbon from table to lulc that is not forest
     carbon_map_nodata = -1
     non_edge_carbon_map_uri = os.path.join(
         args['workspace_dir'], 'non_edge_carbon_map%s.tif' % file_suffix)
-
     pygeoprocessing.reclassify_dataset_uri(
         args['lulc_uri'], lucode_to_carbon, non_edge_carbon_map_uri,
         gdal.GDT_Float32, carbon_map_nodata)
@@ -73,8 +74,6 @@ def execute(args):
     pygeoprocessing.distance_transform_edt(
         forest_mask_uri, edge_distance_uri, process_pool=None)
 
-
-    #TASK: map aboveground carbon from table to lulc that is not forest
     #TASK: combine maps into output
     carbon_map_uri = os.path.join(
         args['workspace_dir'], 'carbon_map%s.tif' % file_suffix)
