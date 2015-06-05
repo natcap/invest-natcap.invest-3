@@ -150,13 +150,12 @@ def execute(args):
             broad_lulc_shrub_split = numpy.where(
                 lulc_ag_split == 131, three_types_of_scrubland, lulc_ag_split)
 
-            #Step 1.4a: Split Forests into Primary, Secondary, Lightly Used and
-            #Plantation.
+            #Step 1.4a: Split Forests into Primary, Secondary
             four_types_of_forest = numpy.empty(lulc_array.shape)
-            four_types_of_forest[(ffqi >= primary_threshold)] = 1.0
-            four_types_of_forest[(
-                ffqi < primary_threshold) & (ffqi >= secondary_threshold)] = 3.0
-            four_types_of_forest[(ffqi < secondary_threshold)] = 4.0
+            #1.0 is primary forest
+            four_types_of_forest[(ffqi >= primary_threshold)] = 1
+            #3 is secondary forest
+            four_types_of_forest[(ffqi < primary_threshold)] = 3
 
             #Step 1.4b: Stamp ag_split classes onto input LULC
             globio_lulc = numpy.where(
