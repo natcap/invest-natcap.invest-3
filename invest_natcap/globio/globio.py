@@ -236,7 +236,7 @@ def execute(args):
                 infrastructure_tmp_raster = (
                    os.path.join(args['workspace_dir'], os.path.basename(filename.lower() + ".tif")))
                 pygeoprocessing.geoprocessing.new_raster_from_base_uri(
-                    args['lulc_uri'], infrastructure_tmp_raster,
+                    globio_lulc_uri, infrastructure_tmp_raster,
                     'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
                 pygeoprocessing.geoprocessing.rasterize_layer_uri(
                     infrastructure_tmp_raster,
