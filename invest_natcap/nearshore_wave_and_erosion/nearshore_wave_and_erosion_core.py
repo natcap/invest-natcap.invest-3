@@ -921,6 +921,10 @@ def compute_transects(args):
                             smooth_transect(interpolated_depths_hdf5, \
                                 args['smoothing_percentage'])
 
+                        if not smoothed_depths_hdf5.size:
+                            print('smoothed_depths_tiff', smoothed_depths_tiff.size)
+                            print('smoothed_depths_hdf5', smoothed_depths_hdf5.size)
+
 
                         stretch_coeff = \
                             args['bathy_cell_size'] / hdf5_cell_size
