@@ -60,7 +60,7 @@ def execute(args):
     
     # Run the profile generator
     if 'Profile generator' in args['modules_to_run']: 
-        #compute_transects(args)
+        compute_transects(args)
         export_transect_coordinates_to_CSV(args['transect_data_uri'])
         plot_transects(args)
     
@@ -921,6 +921,10 @@ def compute_transects(args):
                             smooth_transect(interpolated_depths_hdf5, \
                                 args['smoothing_percentage'])
 
+                        if not smoothed_depths_hdf5.size:
+                            print('smoothed_depths_tiff', smoothed_depths_tiff.size)
+                            print('smoothed_depths_hdf5', smoothed_depths_hdf5.size)
+
 
                         stretch_coeff = \
                             args['bathy_cell_size'] / hdf5_cell_size
@@ -1407,8 +1411,8 @@ def compute_transects(args):
 
     # We're done, we close the files
     #os.remove(tiff_transect_data_uri)
-    transect_data_file_tiff.close()
-    transect_data_file_hdf5.close()
+    #transect_data_file_tiff.close()
+    #transect_data_file_hdf5.close()
 
     return args['transect_data_uri']
     
