@@ -6,4 +6,4 @@ python setup_environment.py --clear --system-site-packages %ENVDIR%
 copy C:\Python27\Lib\distutils\distutils.cfg .\%ENVDIR%\Lib\distutils\distutils.cfg
 %ENVDIR%\Scripts\python setup.py install
 
-%ENVDIR%\Scripts\python invest_sdr.py
+%ENVDIR%\Scripts\python invest_nearshore_wave_and_erosion.py
