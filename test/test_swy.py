@@ -21,7 +21,7 @@ args = {
         u'precip_dir': u'C:/Users/rich/Documents/Dropbox/SeasonalWaterYield/input/precip_proj',
         u'rain_events_table_uri': u'C:/Users/rich/Documents/Dropbox/SeasonalWaterYield/input/Number of events.csv',
         u'threshold_flow_accumulation': u'200',
-        u'workspace_dir': u'C:\\Users\\rich/Documents/delete_swy',
+        u'workspace_dir': u'C:\\Users\\rich/Documents/delete_swy_script',
         u'results_suffix': u'',
 }
 
@@ -63,7 +63,7 @@ def compare_directories(directory_test, directory_base):
 
 if __name__ == '__main__':
     invest_natcap.seasonal_water_yield.seasonal_water_yield.execute(args)
-    DIRECTORY_BASE = r"C:\Users\rich/Documents/delete_swy_base_ws7"
+    DIRECTORY_BASE = r"C:\Users\rich\Documents\delete_base_sw"
     print "Regression testing result"
     difference_list =  compare_directories(args['workspace_dir'], DIRECTORY_BASE)
     if len(difference_list) > 0:
