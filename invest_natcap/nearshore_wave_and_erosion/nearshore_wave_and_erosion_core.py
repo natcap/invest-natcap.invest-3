@@ -561,7 +561,8 @@ def plot_transects(args):
         ax0.add_line(Line2D([x_min_pos, x_max_pos], [0., 0.], c='k', ls=':'))
 
         plt.ylabel('Elevation (m)')
-        plt.title('Coarse vs. resampled shore profiles')
+        plt.title('Coarse vs. resampled profile (' + \
+            str(transect) + '/' + str(bathymetry_dataset_hdf5.shape[0]) + ')')
 
         plt.xticks([x_min_pos, 0.0, x_max_pos], ('', '0', ''))
         plt.yticks([y_min_pos, 0.0, y_max_pos], ('', '0', ''))
