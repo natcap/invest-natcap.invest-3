@@ -12,6 +12,9 @@ import scipy as sp
 from scipy import interpolate
 from scipy import ndimage
 from scipy import sparse
+
+import matplotlib
+matplotlib.use('Agg')   # Write to file, not on a window
 import matplotlib.pyplot as plt
 import h5py
 import unicodedata
@@ -542,6 +545,7 @@ def plot_transects(args):
             label = 'smoothed profile')
 
         l = plt.legend(loc=7, prop={'size':'x-small'})
+        
         l.get_frame().set_alpha(0.4)
 
         ax0.xaxis.set_ticks_position('bottom')
