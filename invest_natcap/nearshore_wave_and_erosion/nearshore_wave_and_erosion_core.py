@@ -469,6 +469,7 @@ def plot_transects(args):
 
     # Loop through the transects
     LOGGER.debug('Generating transect graphs...')
+    plt.subplots(2)
     progress_step = max(bathymetry_dataset_hdf5.shape[0] / 39, 1)
     for transect in transects_to_plot:
         if transect  % progress_step == 0:
@@ -534,8 +535,6 @@ def plot_transects(args):
         
 
         # Plot rough transect in subplot 1
-        plt.subplots(2)
-        
         ax0 = plt.subplot(211)
         plt.plot(x_tiff, \
             bathymetry_dataset_tiff[transect, start_tiff:end_tiff], 'r', \
@@ -643,8 +642,11 @@ def plot_transects(args):
         plt.subplot(212)
         plt.cla()
         
+        plt.clf()
 
     print(' ')
+
+    plt.close()
 
 
 
