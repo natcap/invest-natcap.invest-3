@@ -3136,9 +3136,7 @@ def route_sf(
                                     neighbor_sf_down, r_sum_avail, neighbor_r_sum_avail_pour,
                                     outflow_weight)
                             sf_down_frac = outflow_weight * r_sum_avail / neighbor_r_sum_avail_pour
-                            if sf_down_frac > 1.0:
-                                LOGGER.error(
-                                    'sf_down_frac > 1.0 : %f', sf_down_frac)
+                            if sf_down_frac > 1.0: #can happen because of roundoff error
                                 sf_down_frac = 1.0
                             sf_down_sum +=  outflow_weight * (neighbor_sf_down - neighbor_sf) * sf_down_frac
                             if sf_down_sum < 0:
