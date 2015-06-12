@@ -224,8 +224,8 @@ def execute(args):
 
         pygeoprocessing.routing.route_flux(
             flow_dir_uri, dem_uri_aligned, recharge_avail_uri,
-            zero_absorption_source_uri, loss_uri, r_sum_avail_uri, 'flux_only')
-
+            zero_absorption_source_uri, loss_uri, r_sum_avail_uri, 'flux_only',
+            include_source=False)
 
     #calcualte Qb as the sum of recharge_avail over the aoi
     qb_results = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
