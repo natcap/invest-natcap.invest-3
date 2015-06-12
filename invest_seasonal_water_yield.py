@@ -1,3 +1,6 @@
+import faulthandler
+faulthandler.enable()
+
 import invest_natcap.iui.modelui
 
 if __name__ == '__main__':

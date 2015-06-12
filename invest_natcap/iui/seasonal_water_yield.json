@@ -177,6 +177,32 @@
           "required": true
         }
       ]
+    },
+    {
+      "id": "user_defined_recharge_container",
+      "type": "container",
+      "collapsible": true,
+      "args_id": "user_defined_recharge",
+      "label": "User Defined Recharge Layer (Advanced)",
+      "elements": [
+        {
+          "id": "user_defined_recharge_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "recharge_uri",
+              "args_id": "recharge_uri",
+              "type": "file",
+              "label": "(Raster)",
+              "defaultValue": "",
+              "required": false,
+              "validateAs": {
+                "type": "GDAL"
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
