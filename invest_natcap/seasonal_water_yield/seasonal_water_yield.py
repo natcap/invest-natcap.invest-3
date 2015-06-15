@@ -77,20 +77,22 @@ def execute(args):
         pygeoprocessing.geoprocessing.temporary_filename() for _ in
         range(len(precip_uri_list))]
 
-    lulc_uri_aligned = pygeoprocessing.geoprocessing.temporary_filename()
-    dem_uri_aligned = pygeoprocessing.geoprocessing.temporary_filename()
+    lulc_uri_aligned = pygeoprocessing.temporary_filename()
+    dem_uri_aligned = pygeoprocessing.temporary_filename()
+    soil_group_uri_aligned = pygeoprocessing.temporary_filename()
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
 
     LOGGER.info('Aligning and clipping dataset list')
     input_align_list = (
-        precip_uri_list + et0_uri_list + [args['lulc_uri'], args['dem_uri']])
+        precip_uri_list + et0_uri_list + [
+            args['lulc_uri'], args['dem_uri'], args['soil_group_uri']])
     output_align_list = (
         precip_uri_aligned_list + et0_uri_aligned_list +
-        [lulc_uri_aligned, dem_uri_aligned])
+        [lulc_uri_aligned, dem_uri_aligned, soil_group_uri_aligned])
     interpolate_list = (
-        ['nearest'] * (len(precip_uri_list) + len(et0_uri_aligned_list) + 2))
+        ['nearest'] * (len(precip_uri_list) + len(et0_uri_aligned_list) + 3))
     if args['user_defined_recharge']:
         input_align_list.append(args['recharge_uri'])
         recharge_aligned_uri = (
@@ -176,15 +178,62 @@ def execute(args):
             for month in rain_events_lookup])
 
         LOGGER.info('calculating curve number')
-        cn_lookup = pygeoprocessing.geoprocessing.get_lookup_from_table(
-            args['cn_table_uri'], 'lucode')
-        cn_lookup = dict([
-            (lucode, cn_lookup[lucode]['cn']) for lucode in cn_lookup])
+        soil_nodata = pygeoprocessing.get_nodata_from_uri(
+            args['soil_group_uri'])
+        map_soil_type_to_header = {
+            1: 'cn_a',
+            2: 'cn_b',
+            3: 'cn_c',
+            4: 'cn_d',
+        }
+        cn_nodata = -1
+        lulc_to_soil = {}
+        lulc_nodata = pygeoprocessing.get_nodata_from_uri(lulc_uri_aligned)
+        for soil_id, soil_column in map_soil_type_to_header.iteritems():
+            lulc_to_soil[soil_id] = {
+                'lulc_values': [],
+                'cn_values': []
+            }
+            for lucode in sorted(biophysical_table.keys() + [lulc_nodata]):
+                try:
+                    lulc_to_soil[soil_id]['lulc_values'].append(lucode)
+                    lulc_to_soil[soil_id]['cn_values'].append(
+                        biophysical_table[lucode][soil_column])
+                except KeyError:
+                    if lucode == lulc_nodata:
+                        lulc_to_soil[soil_id]['lulc_values'].append(lucode)
+                        lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
+                    else:
+                        raise
+            lulc_to_soil[soil_id]['lulc_values'] = (
+                numpy.array(lulc_to_soil[soil_id]['lulc_values'],
+                        dtype=numpy.int32))
+            lulc_to_soil[soil_id]['cn_values'] = (
+                numpy.array(lulc_to_soil[soil_id]['cn_values'],
+                        dtype=numpy.float32))
+
+        def cn_op(lulc_array, soil_group_array):
+            """map lulc code and soil to a curve number"""
+            cn_result = numpy.empty(lulc_array.shape)
+            cn_result[:] = cn_nodata
+            for soil_group_id in numpy.unique(soil_group_array):
+                if soil_group_id == soil_nodata:
+                    continue
+                current_soil_mask = (soil_group_array == soil_group_id)
+                index = numpy.digitize(
+                    lulc_array.ravel(),
+                    lulc_to_soil[soil_group_id]['lulc_values'], right=True)
+                cn_values = (
+                    lulc_to_soil[soil_group_id]['cn_values'][index]).reshape(
+                        lulc_array.shape)
+                cn_result[current_soil_mask] = cn_values[current_soil_mask]
+            return cn_result
 
         cn_nodata = -1
-        pygeoprocessing.geoprocessing.reclassify_dataset_uri(
-            lulc_uri_aligned, cn_lookup, cn_uri, gdal.GDT_Float32, cn_nodata,
-            exception_flag='values_required')
+        pygeoprocessing.vectorize_datasets(
+            [lulc_uri_aligned, soil_group_uri_aligned], cn_op, cn_uri,
+            gdal.GDT_Float32, cn_nodata, pixel_size, 'intersection',
+            vectorize_op=False, datasets_are_pre_aligned=True)
 
         LOGGER.info('calculate quick flow')
         calculate_quick_flow(

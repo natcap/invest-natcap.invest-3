@@ -85,6 +85,18 @@
           "helpText": "A GDAL-supported raster file, with an integer LULC code for each cell."
         },
         {
+          "id": "soil_group_uri",
+          "args_id": "soil_group_uri",
+          "type": "file",
+          "label": "Soil Group (Raster)",
+          "defaultValue": "../SeasonalWaterYield/input/",
+          "required": true,
+          "validateAs": {
+            "type": "GDAL"
+          },
+          "helpText": "Map of SCS soil groups (A, B, C, or D) mapped to integer values (1, 2, 3, or 4) used in combination of the LULC map to compute the CN map."
+        },
+        {
           "id": "aoi_uri",
           "args_id": "aoi_uri",
           "type": "file",
@@ -117,25 +129,14 @@
             "type": "CSV",
             "fieldsExist": [
               "lucode",
-              "Kc"
+              "Kc",
+              "CN_A",
+              "CN_B",
+              "CN_C",
+              "CN_D"
             ]
           },
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', and 'Kc'."
-        },
-        {
-          "id": "cn_table_uri",
-          "args_id": "cn_table_uri",
-          "type": "file",
-          "label": "Curve Number Table (CSV)",
-          "defaultValue": "../SeasonalWaterYield/input/cn.csv",
-          "required": true,
-          "validateAs": {
-            "type": "CSV",
-            "fieldsExist": [
-              "lucode",
-              "cn"
-            ]
-          }
         },
         {
           "id": "rain_events_table_uri",
