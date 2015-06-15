@@ -5,6 +5,7 @@ import logging
 import re
 import fractions
 
+import scipy.special
 import numpy
 import gdal
 import pygeoprocessing
@@ -305,15 +306,22 @@ def calculate_quick_flow(
     for m_index in range(1, N_MONTHS + 1):
         def qf_op(pm_array, s_array, stream_array):
             """calculate quickflow"""
-            inner_value = pm_array/float(n_events[m_index])/25.4 - 0.2 * s_array
-            numerator = numpy.where(
-                inner_value > 0,
-                25.4 * n_events[m_index] * inner_value**2, 0.0)
 
-            denominator = pm_array/float(n_events[m_index])/25.4 +0.8 * s_array
-            quickflow = numpy.where(
-                (pm_array == p_nodata) | (s_array == si_nodata) |
-                (denominator == 0), qf_nodata, numerator / denominator)
+            nodata_mask = (pm_array == p_nodata) | (s_array == si_nodata)
+
+            alpha = pm_array / n_events[m_index] / 25.4
+
+            quickflow = (25.4 * n_events[m_index] * (
+                (alpha - s_array) * numpy.exp((-0.2 * s_array)/alpha) +
+                s_array ** 2 / alpha * numpy.exp((0.8 * s_array) / alpha) *
+                scipy.special.expn(1, s_array / alpha)))
+
+            #if alpha == 0, then QF should be zero
+            quickflow[alpha == 0] = 0.0
+            #mask out nodata
+            quickflow[nodata_mask] = qf_nodata
+
+            #if we're on a stream, set quickflow to the precipitation
             quickflow[stream_array == 1] = pm_array[stream_array == 1]
             return quickflow
 
