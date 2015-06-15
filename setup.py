@@ -1,4 +1,5 @@
 """distutils setup.py for InVEST 3.0 framework and models"""
+
 try:
     from setuptools.core import setup
     from setuptools.extension import Extension
@@ -9,6 +10,7 @@ except:
     from distutils.extension import Extension
     from distutils.core import Command
     import distutils.sysconfig as sysconfig
+
 import platform
 import os
 import sys
@@ -107,6 +109,7 @@ packages = [
     'invest_natcap.sdr',
     'invest_natcap.habitat_suitability',
     'invest_natcap.seasonal_water_yield',
+    'invest_natcap.globio',
 ]
 
 def get_iui_resource_data_files(lib_path):
@@ -180,9 +183,11 @@ if platform.system() == 'Windows':
          'invest_scenario_generator.py',
          'invest_scenic_quality.py',
          'routedem.py',
+         'delineateit.py',
          'invest_sdr.py',
          'invest_habitat_suitability.py',
          'invest_seasonal_water_yield.py',
+         'invest_globio.py',
         ]
 
     from py2exe.build_exe import py2exe as py2exeCommand
@@ -288,7 +293,7 @@ REQUIRES_LIST = [
     'cython (>=0.19.1)',
     'scipy (>=0.12.0)',
     'osgeo (>=1.9.2)',
-    'pygeoprocessing (>=0.2.0)',
+    'pygeoprocessing (>=0.3.0a2)',
     ]
 
 #The standard distutils setup command

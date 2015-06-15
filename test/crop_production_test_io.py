@@ -6,23 +6,25 @@ import unittest
 import os
 import pprint
 import tempfile
+import shutil
 
-from numpy import testing
-import numpy as np
+import pygeoprocessing as pygeo
 
-import crop_production_io as io
+import invest_natcap.crop_production.crop_production_io as io
+import crop_production_data as test_data
 
-workspace_dir = '../../test/invest-data/test/data/crop_production/'
+current_dir = os.path.dirname(os.path.realpath(__file__))
+workspace_dir = os.path.join(
+    current_dir, './invest-data/test/data/crop_production/')
 input_dir = os.path.join(workspace_dir, 'input')
 pp = pprint.PrettyPrinter(indent=4)
 
 
-class TestIOReadCropLookupTable(unittest.TestCase):
+class TestReadCropLookupTable(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'crop_lookup_table_uri': os.path.join(
                 input_dir, 'crop_lookup_table.csv'),
-
         }
 
     def test_read_crop_lookup_table(self):
@@ -32,21 +34,38 @@ class TestIOReadCropLookupTable(unittest.TestCase):
         assert(all(map(lambda x: (type(x) is int), keys)))
 
 
-class TestIOReadNutritionTable(unittest.TestCase):
+class TestCreateCropsInAOIList(unittest.TestCase):
+    def setUp(self):
+        d = {'crop_lookup_table_uri': os.path.join(
+            input_dir, 'crop_lookup_table.csv')}
+
+        self.vars_dict = {
+            'crop_lookup_dict': io.read_crop_lookup_table(d)['crop_lookup_dict'],
+            'lulc_map_uri': test_data.create_lulc_map(test_data.aoi_dict)
+        }
+
+    def test_read_crop_lookup_table(self):
+        guess = io.create_crops_in_aoi_list(self.vars_dict)
+        # print guess
+
+
+class TestReadNutritionTable(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'nutrition_table_uri': os.path.join(
                 input_dir, 'nutrition_table.csv'),
+            'crops_in_aoi_list': ['corn', 'soy', 'rice']
         }
 
     def test_read_nutrition_table(self):
         guess = io.read_nutrition_table(self.vars_dict)
         nutrition_table_dict = guess['nutrition_table_dict']
+        # pp.pprint(nutrition_table_dict)
         keys = nutrition_table_dict.keys()
         assert(type(nutrition_table_dict[keys[0]]['energy']) in [float, int])
 
 
-class TestIOReadEconomicsTable(unittest.TestCase):
+class TestReadEconomicsTable(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'economics_table_uri': os.path.join(
@@ -56,11 +75,12 @@ class TestIOReadEconomicsTable(unittest.TestCase):
     def test_read_economics_table(self):
         guess = io.read_economics_table(self.vars_dict)
         economics_table_dict = guess['economics_table_dict']
+        # pp.pprint(economics_table_dict)
         keys = economics_table_dict.keys()
-        assert(type(economics_table_dict[keys[0]]['price']) in [float, int])
+        assert(type(economics_table_dict[keys[0]]['price_per_tonne']) in [float, int])
 
 
-class TestIOReadPercentileYieldTables(unittest.TestCase):
+class TestReadPercentileYieldTables(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'percentile_yield_tables_dir': os.path.join(
@@ -77,7 +97,7 @@ class TestIOReadPercentileYieldTables(unittest.TestCase):
         assert(type(percentile_table_dict[keys[0]][1]['yield_25th']) in [float, int])
 
 
-class TestIOReadRegressionModelYieldTables(unittest.TestCase):
+class TestReadRegressionModelYieldTables(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'modeled_yield_tables_dir': os.path.join(input_dir, 'spatial_dataset/climate_regression_yield/'),
@@ -92,7 +112,7 @@ class TestIOReadRegressionModelYieldTables(unittest.TestCase):
         assert(type(modeled_yield_dict[keys[0]][1]['yield_ceiling']) in [float, int])
 
 
-class TestIOFetchObservedYieldMaps(unittest.TestCase):
+class TestFetchObservedYieldMaps(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
             'observed_yield_maps_dir': os.path.join(
@@ -104,10 +124,10 @@ class TestIOFetchObservedYieldMaps(unittest.TestCase):
         observed_yield_maps_dict = guess['observed_yields_maps_dict']
         # pp.pprint(observed_yield_maps_dict)
         keys = observed_yield_maps_dict.keys()
-        assert(type(observed_yield_maps_dict[keys[0]]) is str)
+        assert(type(observed_yield_maps_dict[keys[0]]) is unicode)
 
 
-class TestIOFetchClimateBinMaps(unittest.TestCase):
+class TestFetchClimateBinMaps(unittest.TestCase):
     def setUp(self):
         # Create Spatial Dataset Directory
 
@@ -120,10 +140,10 @@ class TestIOFetchClimateBinMaps(unittest.TestCase):
         guess = io.fetch_climate_bin_maps(self.vars_dict)
         climate_bin_maps_dict = guess['climate_bin_maps_dict']
         keys = climate_bin_maps_dict.keys()
-        assert(type(climate_bin_maps_dict[keys[0]]) is str)
+        assert(type(climate_bin_maps_dict[keys[0]]) is unicode)
 
 
-class TestIOFetchSpatialDataset(unittest.TestCase):
+class TestFetchSpatialDataset(unittest.TestCase):
     def setUp(self):
         # Create Spatial Dataset Directory
 
@@ -132,7 +152,7 @@ class TestIOFetchSpatialDataset(unittest.TestCase):
                 input_dir, 'spatial_dataset/'),
             'do_yield_observed': True,
             'do_yield_percentile': True,
-            'do_yield_regression_model': True,
+            'do_yield_regression': True,
         }
 
     def test_fetch_spatial_dataset(self):
@@ -144,47 +164,26 @@ class TestIOFetchSpatialDataset(unittest.TestCase):
         assert('percentile_yield_dict' in keys)
 
 
-class TestIOFetchModeledFertilizerMaps(unittest.TestCase):
+class TestFetchModeledFertilizerMaps(unittest.TestCase):
     def setUp(self):
         self.vars_dict = {
-            'modeled_fertilizer_maps_dir':  os.path.join(
+            'fertilizer_maps_dir':  os.path.join(
                 input_dir, 'fertilizer_maps'),
         }
 
-    def test_fetch_modeled_fertilizer_maps(self):
-        guess = io.fetch_modeled_fertilizer_maps(self.vars_dict)
-        modeled_fertilizer_maps_dict = guess['modeled_fertilizer_maps_dict']
-        keys = modeled_fertilizer_maps_dict.keys()
-        assert(type(modeled_fertilizer_maps_dict[keys[0]]) is str)
+    def test_fetch_fertilizer_maps(self):
+        guess = io.fetch_fertilizer_maps(self.vars_dict)
+        fertilizer_maps_dict = guess['fertilizer_maps_dict']
+        keys = fertilizer_maps_dict.keys()
+        assert(type(fertilizer_maps_dict[keys[0]]) is unicode)
 
 
-class TestIOFetchArgs(unittest.TestCase):
+class TestGetInputs(unittest.TestCase):
     def setUp(self):
-        self.args = {
-            'workspace_dir': workspace_dir,
-            'results_suffix': 'scenario_name',
-            'lulc_map_uri': os.path.join(input_dir, 'lulc_map.tif'),
-            'crop_lookup_table_uri': os.path.join(
-                input_dir, 'crop_lookup_table.csv'),
-            'spatial_dataset_dir': os.path.join(input_dir, 'spatial_dataset'),
-            'create_crop_production_maps': True,
-            'do_yield_observed': True,
-            'do_yield_percentile': True,
-            'do_yield_regression_model': True,
-            'modeled_fertilizer_maps_dir': os.path.join(
-                input_dir, 'fertilizer_maps'),
-            'modeled_irrigation_map_uri':  os.path.join(
-                input_dir, 'irrigation_map.tif'),
-            'do_nutrition': True,
-            'nutrition_table_uri': os.path.join(
-                input_dir, 'nutrition_table.csv'),
-            'do_economic_returns': True,
-            'economics_table_uri': os.path.join(
-                input_dir, 'economics_table.csv'),
-        }
+        self.args = test_data.get_args()
 
-    def test_fetch_args(self):
-        guess = io.fetch_args(self.args)
+    def test_get_inputs(self):
+        guess = io.get_inputs(self.args)
         # pp.pprint(guess)
         keys = guess.keys()
         assert('percentile_yield_dict' in keys)
@@ -192,52 +191,78 @@ class TestIOFetchArgs(unittest.TestCase):
         assert('percentile_yield_dict' in keys)
         assert('nutrition_table_dict' in keys)
         assert('economics_table_dict' in keys)
-        assert('modeled_fertilizer_maps_dict' in keys)
+        assert('fertilizer_maps_dict' in keys)
         assert('crop_lookup_dict' in keys)
+        # l = [i for i in guess.keys() if i not in self.args.keys()]
+        # pp.pprint(l)
 
 
-class TestIOSetupTmp(unittest.TestCase):
+class TestCreateResultsTable(unittest.TestCase):
     def setUp(self):
-        workspace_dir = tempfile.mkdtemp()
-        os.mkdir(os.path.join(workspace_dir, 'tmp'))
+        self.tempdir = tempfile.mkdtemp()
 
-        self.vars_dict = {
-            'workspace_dir': workspace_dir
+    def test_run1(self):
+        vars_dict = test_data.get_vars_dict()
+        vars_dict['crop_production_dict'] = {
+            'corn': 1.0,
+            'soy': 2.0,
+            'rice': 3.0
         }
-
-    def test_run(self):
-        guess = io.setup_tmp(self.vars_dict)
-        # pp.pprint(guess)
-        tmp_dir = guess['tmp_dir']
-        assert(os.path.basename(tmp_dir) == 'tmp')
-
-
-class TestIOCleanUpTmp(unittest.TestCase):
-    def setUp(self):
-        workspace_dir = tempfile.mkdtemp()
-        tmp_dir = os.path.join(workspace_dir, 'tmp')
-        os.mkdir(tmp_dir)
-
-        self.vars_dict = {
-            'workspace_dir': workspace_dir,
-            'tmp_dir': tmp_dir
+        vars_dict['output_yield_func_dir'] = self.tempdir
+        vars_dict['crop_total_nutrition_dict'] = {
+            'corn': {
+                'ca': 13,
+                'energy': 12,
+                'fe': 14,
+                'lipid': 11,
+                'mg': 15,
+                'percent_refuse': 0.5,
+                'ph': 16,
+                'protein': 10},
+            'rice': {
+                'ca': 33,
+                'energy': 32,
+                'fe': 34,
+                'lipid': 31,
+                'mg': 35,
+                'percent_refuse': 0.7,
+                'ph': 36,
+                'protein': 30},
+            'soy': {
+                'ca': 23,
+                'energy': 22,
+                'fe': 24,
+                'lipid': 21,
+                'mg': 25,
+                'percent_refuse': 0.2,
+                'ph': 26,
+                'protein': 20}}
+        vars_dict['economics_table_dict'] = {
+            'corn': {
+                'total_returns': 1.0,
+                'total_revenue': 1.0,
+                'total_cost': 0.0
+            },
+            'soy': {
+                'total_returns': 1.0,
+                'total_revenue': 1.0,
+                'total_cost': 0.0
+            },
+            'rice': {
+                'total_returns': 1.0,
+                'total_revenue': 1.0,
+                'total_cost': 0.0
+            }
         }
+        guess = io.create_results_table(vars_dict)
+        check = pygeo.get_lookup_from_csv(
+            os.path.join(self.tempdir, 'results_table.csv'), 'crop')
+        # pp.pprint(check)
 
-    def test_run(self):
-        io.clean_up_tmp(self.vars_dict)
-        # pp.pprint(self.vars_dict)
-        assert(not os.path.exists(self.vars_dict['tmp_dir']))
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
 
-
-# class TestIOCreateOutputs(unittest.TestCase):
-#     def setUp(self):
-#         self.vars_dict = {
-
-#         }
-
-#     def test_run(self):
-#         guess = io.create_outputs(self.vars_dict)
-#         pp.pprint(guess)
 
 if __name__ == '__main__':
+    test_data.get_vars_dict()
     unittest.main()
