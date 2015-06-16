@@ -49,6 +49,7 @@
           "label": "ET0 Directory",
           "defaultValue": "../SeasonalWaterYield/input/et0_proj",
           "required": true,
+          "disabledBy": "user_defined_recharge_container",
           "helpText": "The selected folder has a list of ET0 files with a specified format."
         },
         {
@@ -58,6 +59,7 @@
           "label": "Precipitation Directory",
           "defaultValue": "../SeasonalWaterYield/input/precip_proj",
           "required": true,
+          "disabledBy": "user_defined_recharge_container",
           "helpText": "The selected folder has a list of monthly precipitation files with a specified format."
         },
         {
@@ -94,6 +96,7 @@
           "validateAs": {
             "type": "GDAL"
           },
+          "disabledBy": "user_defined_recharge_container",
           "helpText": "Map of SCS soil groups (A, B, C, or D) mapped to integer values (1, 2, 3, or 4) used in combination of the LULC map to compute the CN map."
         },
         {
@@ -151,7 +154,8 @@
               "month",
               "events"
             ]
-          }
+          },
+          "disabledBy": "user_defined_recharge_container"
         },
         {
           "id": "alpha_m",

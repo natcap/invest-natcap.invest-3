@@ -38,79 +38,86 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    precip_uri_list = []
-    et0_uri_list = []
-
-    et0_dir_list = [
-        os.path.join(args['et0_dir'], f) for f in os.listdir(args['et0_dir'])]
-    precip_dir_list = [
-        os.path.join(args['precip_dir'], f) for f in os.listdir(
-            args['precip_dir'])]
-
-    for month_index in range(1, N_MONTHS + 1):
-        month_file_match = re.compile(r'.*[^\d]%d\.[^.]+$' % month_index)
-
-        for data_type, dir_list, uri_list in [
-                ('et0', et0_dir_list, et0_uri_list),
-                ('Precip', precip_dir_list, precip_uri_list)]:
-
-            file_list = [x for x in dir_list if month_file_match.match(x)]
-            if len(file_list) == 0:
-                raise ValueError(
-                    "No %s found for month %d" % (data_type, month_index))
-            if len(file_list) > 1:
-                raise ValueError(
-                    "Ambiguous set of files found for month %d: %s" %
-                    (month_index, file_list))
-            uri_list.append(file_list[0])
-
     pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
 
     qfi_uri = os.path.join(args['workspace_dir'], 'qf%s.tif' % file_suffix)
     cn_uri = os.path.join(args['workspace_dir'], 'cn%s.tif' % file_suffix)
 
-    #pre align all the datasets
-    precip_uri_aligned_list = [
-        pygeoprocessing.geoprocessing.temporary_filename() for _ in
-        range(len(precip_uri_list))]
-    et0_uri_aligned_list = [
-        pygeoprocessing.geoprocessing.temporary_filename() for _ in
-        range(len(precip_uri_list))]
-
     lulc_uri_aligned = pygeoprocessing.temporary_filename()
     dem_uri_aligned = pygeoprocessing.temporary_filename()
-    soil_group_uri_aligned = pygeoprocessing.temporary_filename()
 
     pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
         args['lulc_uri'])
 
     LOGGER.info('Aligning and clipping dataset list')
-    input_align_list = (
-        precip_uri_list + et0_uri_list + [
-            args['lulc_uri'], args['dem_uri'], args['soil_group_uri']])
-    output_align_list = (
-        precip_uri_aligned_list + et0_uri_aligned_list +
-        [lulc_uri_aligned, dem_uri_aligned, soil_group_uri_aligned])
-    interpolate_list = (
-        ['nearest'] * (len(precip_uri_list) + len(et0_uri_aligned_list) + 3))
+    input_align_list = [args['lulc_uri'], args['dem_uri']]
+    output_align_list = [lulc_uri_aligned, dem_uri_aligned]
+
+    if not args['user_defined_recharge']:
+        precip_uri_list = []
+        et0_uri_list = []
+
+        et0_dir_list = [
+            os.path.join(args['et0_dir'], f) for f in os.listdir(args['et0_dir'])]
+        precip_dir_list = [
+            os.path.join(args['precip_dir'], f) for f in os.listdir(
+                args['precip_dir'])]
+
+        qf_monthly_uri_list = []
+        for m_index in range(1, N_MONTHS + 1):
+            qf_monthly_uri_list.append(
+                os.path.join(
+                    args['workspace_dir'], 'qf_%d%s.tif' %
+                    (m_index, file_suffix)))
+
+        for month_index in range(1, N_MONTHS + 1):
+            month_file_match = re.compile(r'.*[^\d]%d\.[^.]+$' % month_index)
+
+            for data_type, dir_list, uri_list in [
+                    ('et0', et0_dir_list, et0_uri_list),
+                    ('Precip', precip_dir_list, precip_uri_list)]:
+
+                file_list = [x for x in dir_list if month_file_match.match(x)]
+                if len(file_list) == 0:
+                    raise ValueError(
+                        "No %s found for month %d" % (data_type, month_index))
+                if len(file_list) > 1:
+                    raise ValueError(
+                        "Ambiguous set of files found for month %d: %s" %
+                        (month_index, file_list))
+                uri_list.append(file_list[0])
+
+        soil_group_uri_aligned = pygeoprocessing.temporary_filename()
+
+        #pre align all the datasets
+        precip_uri_aligned_list = [
+            pygeoprocessing.geoprocessing.temporary_filename() for _ in
+            range(len(precip_uri_list))]
+        et0_uri_aligned_list = [
+            pygeoprocessing.geoprocessing.temporary_filename() for _ in
+            range(len(precip_uri_list))]
+        input_align_list = (
+            precip_uri_list + [args['soil_group_uri']] + et0_uri_list +
+            input_align_list)
+        output_align_list = (
+            precip_uri_aligned_list + [soil_group_uri_aligned] +
+            et0_uri_aligned_list + output_align_list)
+
+    interpolate_list = ['nearest'] * len(input_align_list)
+    align_index = 0
     if args['user_defined_recharge']:
         input_align_list.append(args['recharge_uri'])
         recharge_aligned_uri = (
             pygeoprocessing.geoprocessing.temporary_filename())
         output_align_list.append(recharge_aligned_uri)
         interpolate_list.append('nearest')
+        align_index = len(interpolate_list) - 1
 
     pygeoprocessing.geoprocessing.align_dataset_list(
         input_align_list, output_align_list,
         interpolate_list,
-        pixel_size, 'intersection', 0, aoi_uri=args['aoi_uri'],
+        pixel_size, 'intersection', align_index, aoi_uri=args['aoi_uri'],
         assert_datasets_projected=True)
-
-    qf_monthly_uri_list = []
-    for m_index in range(1, N_MONTHS + 1):
-        qf_monthly_uri_list.append(
-            os.path.join(
-                args['workspace_dir'], 'qf_%d%s.tif' % (m_index, file_suffix)))
 
     flow_dir_uri = os.path.join(
         args['workspace_dir'], 'flow_dir%s.tif' % file_suffix)
