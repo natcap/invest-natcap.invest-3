@@ -569,7 +569,7 @@ def execute(args):
             temp_tables.append(category_format % (clip_format % predictor))
             temp_tables.append(class_format % (clip_format % predictor))
 
-        LOGGER.debug("Appending model split predictor table names.")       
+        LOGGER.debug("Appending model split predictor table names.")
         for predictor in model_split_predictors:
             temp_tables.append(clip_format % predictor)
             temp_tables.append(projected_format % (predictor, grid_srid))
@@ -593,7 +593,7 @@ def execute(args):
         LOGGER.error(msg)
 
 if __name__ == "__main__":
-    LOGGER = logging.getLogger("recreation_server_scenario")
+    LOGGER = logging.getLogger("invest_natcap.recreation.server_scenario")
     formatter = logging.Formatter("%(asctime)s, %(levelname)s, %(message)s",
                                   "%m/%d/%Y %H:%M:%S")
     LOGGER.setLevel(logging.DEBUG)

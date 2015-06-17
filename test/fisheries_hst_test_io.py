@@ -5,13 +5,12 @@ import pprint
 import numpy as np
 from numpy import testing
 
-import fisheries_hst_io as io
-from fisheries_hst_io import MissingParameter
+import invest_natcap.fisheries.fisheries_hst_io as io
 
 pp = pprint.PrettyPrinter(indent=4)
 
-workspace_dir = '../../test/invest-data/test/data/fisheries/'
-data_dir = '../../test/invest-data/test/data/fisheries/'
+workspace_dir = './invest-data/test/data/fisheries/'
+data_dir = './invest-data/test/data/fisheries/'
 inputs_dir = os.path.join(data_dir, 'habitat_scenario_tool/inputs')
 outputs_dir = os.path.join(data_dir, 'habitat_scenario_tool/outputs')
 
@@ -409,11 +408,11 @@ class TestFetchArgs(unittest.TestCase):
 class TestSavePopCSV(unittest.TestCase):
     def setUp(self):
         self.args = {
-            'workspace_dir': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/',
+            'workspace_dir': './invest-data/test/data/fisheries/habitat_scenario_tool/',
             'sexsp': 'Yes',
-            'population_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/output/pop_params_modified.csv',
-            'habitat_chg_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/habitat_chg_params.csv',
-            'habitat_dep_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/habitat_dep_params.csv',
+            'population_csv_uri': './invest-data/test/data/fisheries/habitat_scenario_tool/output/pop_params_modified.csv',
+            'habitat_chg_csv_uri': './invest-data/test/data/fisheries/habitat_scenario_tool/inputs/habitat_chg_params.csv',
+            'habitat_dep_csv_uri': './invest-data/test/data/fisheries/habitat_scenario_tool/inputs/habitat_dep_params.csv',
             'gamma': 0.5,
         }
         self.vars_check = {
@@ -485,12 +484,12 @@ class TestSavePopCSV(unittest.TestCase):
                 [  2.27258625e-06,   7.25000000e-01,   7.25000000e-01,
                    7.25000000e-01,   5.27500000e-01]]]),
             'gamma': 0.5,
-            'habitat_chg_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/habitat_chg_params.csv',
-            'habitat_dep_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/habitat_dep_params.csv',
-            'output_dir': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/output',
-            'population_csv_uri': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/pop_params.csv',
+            'habitat_chg_csv_uri': './invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/habitat_chg_params.csv',
+            'habitat_dep_csv_uri': './invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/habitat_dep_params.csv',
+            'output_dir': './invest-data/test/data/fisheries/habitat_scenario_tool/output',
+            'population_csv_uri': './invest-data/test/data/fisheries/habitat_scenario_tool/inputs/spreadsheet/pop_params.csv',
             'sexsp': 2,
-            'workspace_dir': '../../test/invest-data/test/data/fisheries/habitat_scenario_tool/',
+            'workspace_dir': './test/invest-data/test/data/fisheries/habitat_scenario_tool/',
 
             # Generated Variable
             'Surv_nat_xsa_mod': np.array(

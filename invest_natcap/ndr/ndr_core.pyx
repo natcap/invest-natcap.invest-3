@@ -469,7 +469,6 @@ def ndr_eff_calculation(
                 else:
                     step_size = cell_size
 
-                ############### build up the effective retention value
                 current_step_factor = exp(-5 * step_size / crit_len)
                 if neighbor_effective_retention >= retention_eff_lulc:
                     current_effective_retention += (

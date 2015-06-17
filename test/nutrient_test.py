@@ -6,7 +6,7 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 
-from invest_natcap import raster_utils
+from pygeoprocessing import geoprocessing as raster_utils
 from invest_natcap.nutrient import nutrient
 
 BASE_DATA = os.path.join('data', 'base_data', 'terrestrial')

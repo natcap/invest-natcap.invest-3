@@ -2,16 +2,15 @@ import unittest
 import pprint
 import os
 
-import numpy as np
 from numpy import testing
 
-import fisheries_hst as main
-import fisheries_hst_io as io
+import invest_natcap.fisheries.fisheries_hst as main
+import invest_natcap.fisheries.fisheries_hst_io as io
 
 pp = pprint.PrettyPrinter(indent=4)
 
-workspace_dir = '../../test/invest-data/test/data/fisheries/'
-data_dir = '../../test/invest-data/Fisheries'
+workspace_dir = './invest-data/test/data/fisheries/'
+data_dir = './invest-data/Fisheries'
 inputs_dir = os.path.join(data_dir, 'input/Habitat_Scenario_Tool')
 outputs_dir = os.path.join(workspace_dir, 'output')
 

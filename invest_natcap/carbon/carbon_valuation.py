@@ -11,7 +11,7 @@ import pygeoprocessing.geoprocessing
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-LOGGER = logging.getLogger('carbon_valuation')
+LOGGER = logging.getLogger('invest_natcap.carbon.valuation')
 
 def execute(args):
     return execute_30(**args)

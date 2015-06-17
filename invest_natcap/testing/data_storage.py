@@ -29,7 +29,7 @@ COMPLEX_FILES = {
     'ESRI Shapefile': ['.dbf', '.shp', '.prj', '.shx'],
 }
 
-LOGGER = logging.getLogger('data_storage')
+LOGGER = logging.getLogger('invest_natcap.testing.data_storage')
 
 
 def archive_uri(name=None):
@@ -270,7 +270,7 @@ def collect_parameters(parameters, archive_uri):
     #   If a URI is found, copy that file to a new location in the temp
     #   workspace and update the URI reference.
     #   Duplicate URIs should also have the same replacement URI.
-    # 
+    #
     # If a workspace or suffix is provided, ignore that key.
     LOGGER.debug('Keys: %s', parameters.keys())
     ignored_keys = []

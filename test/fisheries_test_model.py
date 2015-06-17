@@ -4,7 +4,7 @@ import pprint
 from numpy import testing
 import numpy as np
 
-import fisheries_model as model
+import invest_natcap.fisheries.fisheries_model as model
 
 pp = pprint.PrettyPrinter(indent=4)
 

@@ -1,187 +1,282 @@
-'''This will be the test module for the non-core portion of Fisheries.'''
-
+import unittest
 import os
-import logging
-import glob
-import filecmp
-from nose.plugins.skip import SkipTest
+import pprint
 
-import invest_natcap.testing
+from numpy import testing
+import numpy as np
+# from nose.plugins.skip import SkipTest
 
-from invest_natcap.fisheries import fisheries
+import invest_natcap.fisheries.fisheries as fisheries
 
-LOGGER = logging.getLogger('fisheries_test')
-logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+workspace_dir = './invest-data/Fisheries'
+input_dir = './invest-data/Fisheries/input'
+pp = pprint.PrettyPrinter(indent=4)
 
-class TestFisheries(invest_natcap.testing.GISTest):
 
-    def test_main_csv_parse(self):
-        '''Want to make sure that the main CSV parsing function is working as
-        expected. Should run through fine on the sample CSV, but throw errors
-        for both types of incorrect parameter names.'''
+class TestBlueCrab(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+            'workspace_dir': workspace_dir,
+            'results_suffix': '',
+            'aoi_uri': os.path.join(input_dir, 'shapefile_galveston/Galveston_Subregion.shp'),
+            'total_timesteps': 100,
+            'population_type': 'Age-Based',
+            'sexsp': 'No',
+            'harvest_units': 'Individuals',
+            'do_batch': False,
+            'population_csv_uri': os.path.join(input_dir, 'input_blue_crab/population_params.csv'),
+            'spawn_units': 'Individuals',
+            'total_init_recruits': 200000.0,
+            'recruitment_type': 'Ricker',
+            'alpha': 6050000.0,
+            'beta': 0.0000000414,
+            'total_recur_recruits': 0,
+            'migr_cont': False,
+            'migration_dir': '',
+            'val_cont': False,
+            'frac_post_process': 0.0,
+            'unit_price': 0.0,
+        }
 
-        shrimp_correct = './invest-data/test/data/fisheries/CSVs/shrimp_correct.csv'  
-        shrimp_bad_area = './invest-data/test/data/fisheries/CSVs/shrimp_bad_area.csv'  
-        shrimp_bad_stage = './invest-data/test/data/fisheries/CSVs/shrimp_bad_stage.csv'  
-        
-        lobster_multi_area = './invest-data/test/data/fisheries/CSVs/lobster_multi_area.csv'
+    def test_run(self):
+        guess = fisheries.execute(self.args, create_outputs=False)
+        # pp.pprint(guess[0]['N_tasx'])
+        # pp.pprint(guess[0]['N_tasx'][0][0])
 
-        #All the files missing area or stage parameters
-        shrimp_no_dur = './invest-data/test/data/fisheries/CSVs/shrimp_missing_duration.csv'
-        bc_no_mat = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_mat.csv'
-        shrimp_no_weight = './invest-data/test/data/fisheries/CSVs/shrimp_missing_weight.csv'
-        bc_no_vuln = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_vuln.csv'
-        bc_no_exploit = './invest-data/test/data/fisheries/CSVs/blue_crab_missing_exploit.csv'
+        # check harvest: 24,798,419
+        harvest_guess = guess[0]['H_tx'][self.args['total_timesteps'] - 1].sum()
+        testing.assert_approx_equal(harvest_guess, 24798419.0, significant=3)
 
-        bc_area_count = 1
-        shrimp_area_count = 1
-        lobster_area_count = 9
-        
-        #Smoke test the single area and multi area files.
-        fisheries.parse_main_csv(shrimp_correct, shrimp_area_count, 'Fixed', True, 'Stage Specific')
-        dictionary = fisheries.parse_main_csv(lobster_multi_area, 
-                            lobster_area_count, 'Beverton-Holt', True, 'Age Specific')
+        # check spawners: 42,644,460
+        spawners_check = 42644460.0
+        spawners_guess = guess[0]['Spawners_t'][self.args['total_timesteps'] - 1]
+        testing.assert_approx_equal(spawners_guess, spawners_check, significant=4)
 
-        #Check that exceptions are properly raised when expected.
-        self.assertRaises(fisheries.ImproperStageParameter,
-                        fisheries.parse_main_csv, shrimp_bad_stage, 
-                            shrimp_area_count, 'Fixed', True, 'Stage Specific')
 
-        self.assertRaises(fisheries.ImproperAreaParameter,
-                        fisheries.parse_main_csv, shrimp_bad_area, 
-                        shrimp_area_count, 'Fixed', True, 'Age Specific')
-  
-        #Exception raises for all the missing stage/area columns. 
-        self.assertRaises(fisheries.MissingParameter,
-                        fisheries.parse_main_csv, shrimp_no_dur, 
-                        shrimp_area_count, 'Fixed', True, 'Stage Specific')
-        self.assertRaises(fisheries.MissingParameter,
-                        fisheries.parse_main_csv, shrimp_no_weight, 
-                        shrimp_area_count, 'Fixed', True, 'Stage Specific')
-        self.assertRaises(fisheries.MissingParameter,
-                        fisheries.parse_main_csv, bc_no_mat, 
-                        bc_area_count, 'Ricker', False, 'Age Specific')
-        self.assertRaises(fisheries.MissingParameter,
-                        fisheries.parse_main_csv, bc_no_vuln, 
-                        bc_area_count, 'Ricker', False, 'Age Specific')
-        self.assertRaises(fisheries.MissingParameter,
-                        fisheries.parse_main_csv, bc_no_exploit, 
-                        bc_area_count, 'Ricker', False, 'Age Specific')
-    #@SkipTest
-    def test_fecundity_csv_parse(self):
-       '''Since none of the models currently use fecundity for their
-       recruitment, need to test to make sure that it actually parses the way I
-       think it should.'''
+class TestDungenessCrab(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+            'workspace_dir': workspace_dir,
+            'results_suffix': '',
+            'aoi_uri': os.path.join(input_dir, 'shapefile_hood_canal/DC_HoodCanal_Subregions.shp'),
+            'total_timesteps': 100,
+            'population_type': 'Age-Based',
+            'sexsp': 'Yes',
+            'harvest_units': 'Individuals',
+            'do_batch': False,
+            'population_csv_uri': os.path.join(input_dir, 'input_dungeness_crab/population_params.csv'),
+            'spawn_units': 'Individuals',
+            'total_init_recruits': 2249339326901,
+            'recruitment_type': 'Ricker',
+            'alpha': 2000000,
+            'beta': 0.000000309,
+            'total_recur_recruits': 0,
+            'migr_cont': False,
+            'migration_dir': '',
+            'val_cont': False,
+            'frac_post_process': 0.0,
+            'unit_price': 0.0,
+        }
 
-       csv_uri = './invest-data/test/data/fisheries/CSVs/shrimp_fecundity_test.csv'
+    def test_run(self):
+        guess = fisheries.execute(self.args, create_outputs=False)
+        # pp.pprint(guess[0]['Maturity'])
 
-       dictionary = fisheries.parse_fec_csv(csv_uri)
+        # check harvest: 526,987
+        harvest_check = 526987.0
+        harvest_guess = guess[0]['H_tx'][self.args['total_timesteps'] - 1].sum()
+        testing.assert_approx_equal(harvest_guess, harvest_check, significant=2)
 
-       LOGGER.debug(dictionary)
+        # check spawners: 4,051,538
+        spawners_check = 4051538.0
+        spawners_guess = guess[0]['Spawners_t'][self.args['total_timesteps'] - 1]
+        testing.assert_approx_equal(spawners_guess, spawners_check, significant=3)
 
-    def test_recruitment_errors(self):
-        '''One of the first things we want to check is whether the necessary
-        parameters for recruitment (based on the user-selected recruitment
-        equation) exist within args. Test that it's throwing errors when
-        expected for args sets that don't contain what we want.
-        '''
-        
-        args = {}
-        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
 
-        #Test B-H, Ricker
-        for equation in ['Beverton-Holt', 'Ricker']:
-            args['rec_eq'] = equation
+class TestLobster(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+            'workspace_dir': workspace_dir,
+            'results_suffix': 'test',
+            'aoi_uri': os.path.join(input_dir, 'shapefile_belize/Lob_Belize_Subregions.shp'),
+            'total_timesteps': 100,
+            'population_type': 'Age-Based',
+            'sexsp': 'No',
+            'harvest_units': 'Weight',
+            'do_batch': False,
+            'population_csv_uri': os.path.join(input_dir, 'input_lobster/population_params.csv'),
+            'spawn_units': 'Weight',
+            'total_init_recruits': 4686959.0,
+            'recruitment_type': 'Beverton-Holt',
+            'alpha': 5770000.0,
+            'beta': 2885000.0,
+            'total_recur_recruits': 0,
+            'migr_cont': True,
+            'migration_dir': os.path.join(input_dir, 'input_lobster/Migrations'),
+            'val_cont': True,
+            'frac_post_process': 0.28633258,
+            'unit_price': 29.93,
+        }
 
-            self.assertRaises(fisheries.MissingParameter,
-                            fisheries.execute, args)
+    def test_run(self):
+        guess = fisheries.execute(self.args, create_outputs=False)
+        # pp.pprint(guess)
 
-        #Test Fecundity
-        args['rec_eq'] = 'Fecundity'
+        # check harvest: 936,451
+        harvest_guess = guess[0]['H_tx'][self.args['total_timesteps'] - 1].sum()
+        testing.assert_approx_equal(harvest_guess, 963451.0, significant=4)
 
-        self.assertRaises(fisheries.MissingParameter,
-                        fisheries.execute, args)
+        # check spawners: 2,847,870
+        spawners_guess = guess[0]['Spawners_t'][self.args['total_timesteps'] - 1]
+        testing.assert_approx_equal(spawners_guess, 2847870.0, significant=3)
 
-        #Test Fixed Recruitment
-        args['rec_eq'] = 'Fixed'
 
-        self.assertRaises(fisheries.MissingParameter,
-                        fisheries.execute, args)
+class TestShrimp(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+            'workspace_dir': workspace_dir,
+            'results_suffix': '',
+            'aoi_uri': os.path.join(input_dir, 'shapefile_galveston/Galveston_Subregion.shp'),
+            'total_timesteps': 300,
+            'population_type': 'Stage-Based',
+            'sexsp': 'No',
+            'harvest_units': 'Individuals',
+            'do_batch': False,
+            'population_csv_uri': os.path.join(input_dir, 'input_shrimp/population_params.csv'),
+            'spawn_units': 'Weight',
+            'total_init_recruits': 100000.0,
+            'recruitment_type': 'Fixed',
+            'alpha': 0,
+            'beta': 0,
+            'total_recur_recruits': 216000000000.0,
+            'migr_cont': False,
+            'migration_dir': '',
+            'val_cont': False,
+            'frac_post_process': 0.0,
+            'unit_price': 0.0,
+        }
 
-    def test_age_no_gender_smoke(self):
-        #Going to use Blue Crab for testing.
-        args = {}
-        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest-data/Fisheries/Input/Galveston_Subregion.shp'
-        args['class_params_uri'] = './invest-data/Fisheries/Input/blue_crab_main_params.csv'
-        args['maturity_type'] = "Age Specific"
-        args['hrv_type'] = 'Numbers'
-        args['num_classes'] = 4
-        args['is_gendered'] = False
-        args['rec_eq'] = "Ricker"
-        args['alpha'] = 6050000
-        args['beta'] = 0.00000004140
-        args['init_recruits'] = 200000
-        args['duration'] = 100
+    def test_run(self):
+        guess = fisheries.execute(self.args, create_outputs=False)
 
-        fisheries.execute(args)
+        # check harvest: 456,424
+        harvest_guess = guess[0]['H_tx'][self.args['total_timesteps'] - 1].sum()
+        testing.assert_approx_equal(harvest_guess, 456424.0, significant=2)
 
-    def test_age_gendered_smoke(self):
-        #Using DC for gendered testing.
-        args = {}
-        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest-data/Fisheries/Input/DC_HoodCanal_Subregions.shp'
-        args['class_params_uri'] = './invest-data/Fisheries/Input/dungeness_crab_main_params.csv'
-        args['maturity_type'] = "Age Specific"
-        args['hrv_type'] = 'Numbers'
-        #Are counting each gender/age combo as an age class?
-        args['num_classes'] = 10
-        args['is_gendered'] = True
-        args['rec_eq'] = "Ricker"
-        args['alpha'] = 2000000
-        args['beta'] = 0.00000030912
-        args['init_recruits'] = 2249339326901.15
-        args['duration'] = 100
 
-        fisheries.execute(args)
-    
-    def test_stage_no_gender_smoke(self):
-        #Using white shrimp for stage testing.
-        args = {}
-        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest-data/Fisheries/Input/Galveston_Subregion.shp'
-        args['class_params_uri'] = './invest-data/Fisheries/Input/white_shrimp_main_params.csv'
-        args['maturity_type'] = "Stage Specific"
-        args['hrv_type'] = 'Weight'
-        #Are counting each gender/age combo as an age class?
-        args['num_classes'] = 5
-        args['is_gendered'] = False
-        args['rec_eq'] = "Fixed"
-        args['fix_param'] = 216000000000
-        args['init_recruits'] = 100000
-        args['duration'] = 300
+class TestCustomRecruitmentFunc(unittest.TestCase):
+    def setUp(self):
+        Matu = np.array([0.0, 0.0, 0.0, 1.0])  # the Maturity vector in the Population Parameters File
+        Weight = 1.0  # the Weight vector in the Population Parameters File
+        LarvDisp = np.array([1.0])  # the LarvalDispersal vector in the Population Parameters File
+        alpha = 6050000.0  # scalar value
+        beta = 0.0000000414  # scalar value
+        sexsp = 1   # 1 = not sex-specific, 2 = sex-specific
 
-        fisheries.execute(args)
+        def spawners(N_prev):
+            return (N_prev * Matu * Weight).sum()
 
-    def test_age_no_gender_migration(self):
-        #Using lobster to test a model which uses migration.
-        args = {}
-        args['workspace_dir'] = './invest-data/test/data/test_out/fisheries'
-        args['aoi_uri'] = './invest-data/Fisheries/Input/Lob_Belize_Subregions.shp'
-        args['class_params_uri'] = './invest-data/Fisheries/Input/caribbean_spiny_lobster_main_params.csv'
-        args['maturity_type'] = "Age Specific"
-        args['hrv_type'] = 'Weight'
-        args['num_classes'] = 8
-        args['is_gendered'] = False
-        args['rec_eq'] = "Beverton-Holt"
-        args['alpha'] = 5770000
-        args['beta'] = 2885000
-        args['init_recruits'] = 4686959.42894736
-        args['mig_params_uri'] = './invest-data/Fisheries/Input/Caribbean_Spiny_Lobster_migration'
-        args['frac_post_process'] = 0.286332579995172
-        args['unit_price'] = 29.9320213844594
-        args['duration'] = 100
+        def rec_func_Ricker(N_prev):
+            N_0 = (LarvDisp * (alpha * spawners(N_prev) * (
+                np.e ** (-beta * spawners(N_prev)))) / sexsp)
+            return (N_0, spawners(N_prev))
 
-        fisheries.execute(args)
 
+        self.args = {
+            'workspace_dir': workspace_dir,
+            'results_suffix': '',
+            'aoi_uri': os.path.join(input_dir, 'shapefile_galveston/Galveston_Subregion.shp'),
+            'total_timesteps': 100,
+            'population_type': 'Age-Based',
+            'sexsp': 'No',
+            'harvest_units': 'Individuals',
+            'do_batch': False,
+            'population_csv_uri': os.path.join(input_dir, 'input_blue_crab/population_params.csv'),
+            'spawn_units': 'Individuals',
+            'total_init_recruits': 200000.0,
+            'recruitment_type': 'Other',
+            'recruitment_func': rec_func_Ricker,
+            'alpha': 6050000.0,
+            'beta': 0.0000000414,
+            'total_recur_recruits': 0,
+            'migr_cont': False,
+            'migration_dir': '',
+            'val_cont': False,
+            'frac_post_process': 0.0,
+            'unit_price': 0.0,
+        }
+
+    def test_run(self):
+        guess = fisheries.execute(self.args, create_outputs=False)
+        # pp.pprint(guess[0]['N_tasx'])
+        # pp.pprint(guess[0]['N_tasx'][0][0])
+
+        # check harvest: 24,798,419
+        harvest_guess = guess[0]['H_tx'][self.args['total_timesteps'] - 1].sum()
+        testing.assert_approx_equal(harvest_guess, 24798419.0, significant=3)
+
+        # check spawners: 42,644,460
+        spawners_check = 42644460.0
+        spawners_guess = guess[0]['Spawners_t'][self.args['total_timesteps'] - 1]
+        testing.assert_approx_equal(spawners_guess, spawners_check, significant=4)
+
+
+class TestCustomRecruitmentFunc2(unittest.TestCase):
+    def setUp(self):
+        Matu = np.array([[ 0.,  0.,  0.,  1.,  1.],
+                         [ 0.,  0.,  0.,  0.,  0.]])  # the Maturity vector in the Population Parameters File
+        Weight = 1.0  # the Weight vector in the Population Parameters File
+        LarvDisp = np.array([ 0.09,  0.12,  0.18,  0.29,  0.17,  0.15])  # the LarvalDispersal vector in the Population Parameters File
+        alpha = 2000000  # scalar value
+        beta = 0.000000309  # scalar value
+        sexsp = 2   # 1 = not sex-specific, 2 = sex-specific
+
+        def spawners(N_prev):
+            return (N_prev * Matu * Weight).sum()
+
+        def rec_func_Ricker(N_prev):
+            N_0 = (LarvDisp * (alpha * spawners(N_prev) * (
+                np.e ** (-beta * spawners(N_prev)))) / sexsp)
+            return (N_0, spawners(N_prev))
+
+        self.args = {
+            'workspace_dir': workspace_dir,
+            'results_suffix': '',
+            'aoi_uri': os.path.join(input_dir, 'shapefile_hood_canal/DC_HoodCanal_Subregions.shp'),
+            'total_timesteps': 100,
+            'population_type': 'Age-Based',
+            'sexsp': 'Yes',
+            'harvest_units': 'Individuals',
+            'do_batch': False,
+            'population_csv_uri': os.path.join(input_dir, 'input_dungeness_crab/population_params.csv'),
+            'spawn_units': 'Individuals',
+            'total_init_recruits': 2249339326901,
+            'recruitment_type': 'Other',
+            'recruitment_func': rec_func_Ricker,
+            'alpha': 2000000,
+            'beta': 0.000000309,
+            'total_recur_recruits': 0,
+            'migr_cont': False,
+            'migration_dir': '',
+            'val_cont': False,
+            'frac_post_process': 0.0,
+            'unit_price': 0.0,
+        }
+
+    def test_run(self):
+        guess = fisheries.execute(self.args, create_outputs=False)
+        # pp.pprint(guess)
+
+        # check harvest: 526,987
+        harvest_check = 526987.0
+        harvest_guess = guess[0]['H_tx'][self.args['total_timesteps'] - 1].sum()
+        testing.assert_approx_equal(harvest_guess, harvest_check, significant=2)
+
+        # check spawners: 4,051,538
+        spawners_check = 4051538.0
+        spawners_guess = guess[0]['Spawners_t'][self.args['total_timesteps'] - 1]
+        testing.assert_approx_equal(spawners_guess, spawners_check, significant=3)
+
+
+if __name__ == '__main__':
+    unittest.main()

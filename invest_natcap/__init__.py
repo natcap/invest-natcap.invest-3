@@ -1,3 +1,5 @@
+"""init module for invest_natcap"""
+
 from urllib import urlencode
 from urllib2 import Request
 from urllib2 import urlopen
@@ -7,17 +9,20 @@ import platform
 import sys
 import hashlib
 import json
-
+import distutils.version
 import build_utils
 
-#The following line of code hides some errors that seem important and doesn't
-#raise exceptions on them.  FOr example:
-#ERROR 5: Access window out of range in RasterIO().  Requested
-#(1,15) of size 25x3 on raster of 26x17.
-#disappears when this line is turned on.  Probably not a good idea to uncomment
-#until we know what's happening
-#from osgeo import gdal
-#gdal.UseExceptions()
+try:
+    import pygeoprocessing
+    REQUIRED_PYGEOPROCESSING_VERSION = '0.3.0a3'
+    if (distutils.version.StrictVersion(pygeoprocessing.__version__) <
+            distutils.version.StrictVersion(REQUIRED_PYGEOPROCESSING_VERSION)):
+        raise Exception(
+            "Requires PyGeoprocessing version at least %s.  "
+            "Current version %s ",
+            REQUIRED_PYGEOPROCESSING_VERSION, pygeoprocessing.__version__)
+except ImportError:
+    pass
 
 try:
     __version__ = build_utils.invest_version()
@@ -92,6 +97,7 @@ def log_model(model_name, model_version=None):
             'release': platform.release(),
             'full_platform_string': platform.platform(),
             'fs_encoding': sys.getfilesystemencoding(),
+            'preferred_encoding': locale.getdefaultlocale()[1],
             'default_language': locale.getdefaultlocale()[0],
             'python': {
                 'version': platform.python_version(),

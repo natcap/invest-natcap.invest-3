@@ -12,7 +12,7 @@ import scenic_quality_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-LOGGER = logging.getLogger('scenic_quality_core')
+LOGGER = logging.getLogger('invest_natcap.scenic_quality.core')
 
 def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a

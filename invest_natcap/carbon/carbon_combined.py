@@ -14,7 +14,7 @@ from invest_natcap.reporting import html
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('carbon_combined')
+LOGGER = logging.getLogger('invest_natcap.carbon.combined')
 
 def execute(args):
     execute_30(**args)

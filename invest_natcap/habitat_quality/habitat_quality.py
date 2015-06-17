@@ -14,7 +14,7 @@ import pygeoprocessing.geoprocessing
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('habitat_quality')
+LOGGER = logging.getLogger('invest_natcap.habitat_quality.habitat_quality')
 
 
 def execute(args):
@@ -199,7 +199,7 @@ def execute(args):
 
         #Create raster of habitat based on habitat field
         habitat_uri = os.path.join(
-            inter_dir, 'habitat_%s_%s.tif' % (lulc_key, suffix))
+            inter_dir, 'habitat_%s%s.tif' % (lulc_key, suffix))
 
         map_raster_to_dict_values(
             lulc_ds_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
@@ -247,7 +247,7 @@ def execute(args):
             LOGGER.debug('Max distance in pixels: %f', dr_pixel)
 
             filtered_threat_uri = os.path.join(
-                inter_dir, threat + '_filtered_%s_%s.tif' % (lulc_key, suffix))
+                inter_dir, threat + '_filtered_%s%s.tif' % (lulc_key, suffix))
 
             # blur the threat raster based on the effect of the threat over
             # distance
@@ -358,11 +358,13 @@ def execute(args):
                 returns - a float representing the habitat quality
                     score for a pixel
             """
+            degredataion_clamped = numpy.where(degradation < 0, 0, degradation)
+
             return np.where(
                     (degradation == out_nodata) | (habitat == out_nodata),
                     out_nodata,
-                    (habitat * (1.0 - ((degradation**scaling_param) /
-                        (degradation**scaling_param + ksq)))))
+                    (habitat * (1.0 - ((degredataion_clamped**scaling_param) /
+                        (degredataion_clamped**scaling_param + ksq)))))
 
         quality_uri = os.path.join(
             out_dir, 'quality_out' + lulc_key + suffix + '.tif')

@@ -5,11 +5,11 @@ import pprint
 from numpy import testing
 import numpy as np
 
-import fisheries_io
+import invest_natcap.fisheries.fisheries_io as fisheries_io
 
-from fisheries_io import MissingParameter
+from invest_natcap.fisheries.fisheries_io import MissingParameter
 
-data_directory = '../../test/invest-data/test/data/fisheries'
+data_directory = './invest-data/test/data/fisheries'
 pp = pprint.PrettyPrinter(indent=4)
 
 
