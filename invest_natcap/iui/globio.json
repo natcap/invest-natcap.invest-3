@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 700,
+  "height": 750,
   "width": 900,
   "elements": [
     {
