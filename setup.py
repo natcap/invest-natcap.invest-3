@@ -304,6 +304,7 @@ setup(name='invest_natcap',
       requires=REQUIRES_LIST,
       include_dirs=[np.get_include()],
       data_files=data_files,
+      include_package_data=True,
       ext_modules=cythonize([
         Extension(
           name="scenic_quality_cython_core",
