@@ -141,10 +141,10 @@
           "disabledBy": "predefined_globio"
         },
         {
-          "id": "yieldgap_threshold",
-          "args_id": "yieldgap_threshold",
+          "id": "intensification_threshold",
+          "args_id": "intensification_threshold",
           "type": "text",
-          "label": "Yieldgap Threshold",
+          "label": "Intensification Threshold",
           "defaultValue": "0.456804906897",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
