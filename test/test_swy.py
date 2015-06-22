@@ -4,8 +4,11 @@ import pprint
 import hashlib
 import os
 
-import invest_natcap.seasonal_water_yield.seasonal_water_yield
-
+import pygeoprocessing
+#import invest_natcap.seasonal_water_yield.seasonal_water_yield
+import seasonal_water_yield_core
+#import ndr_core
+#import scenic_quality_cython_core
 
 args = {
         u'alpha_m': u'1/12',
@@ -21,7 +24,7 @@ args = {
         u'precip_dir': u'C:/Users/rich/Documents/Dropbox/SeasonalWaterYield/input/precip_proj',
         u'rain_events_table_uri': u'C:/Users/rich/Documents/Dropbox/SeasonalWaterYield/input/Number of events.csv',
         u'threshold_flow_accumulation': u'200',
-        u'workspace_dir': u'C:\\Users\\rich/Documents/delete_swy',
+        u'workspace_dir': u'C:\\Users\\rich/Documents/delete_swy_script',
         u'results_suffix': u'',
 }
 
@@ -62,12 +65,29 @@ def compare_directories(directory_test, directory_base):
     return difference_list
 
 if __name__ == '__main__':
-    invest_natcap.seasonal_water_yield.seasonal_water_yield.execute(args)
-    DIRECTORY_BASE = r"C:\Users\rich/Documents/delete_swy_base_ws7"
-    print "Regression testing result"
-    difference_list =  compare_directories(args['workspace_dir'], DIRECTORY_BASE)
-    if len(difference_list) > 0:
-        print "These files don't match: "
-        pprint.pprint(difference_list)
-    else:
-        print "Everything matches!"
+    dem_uri_aligned = r"C:\Users\rich\Documents\delete_base_sw_ui_user_defined_recharge_layer2\aligned_dem.tif"
+    pygeoprocessing.create_directories([r"C:\Users\Rich\Documents\delete_sf_debug"])
+    for data_dir in ['delete_base_sw_ui_user_defined_recharge_layer2', 'delete_base_sw_ui']:
+        recharge_avail_uri = r"C:\Users\rich\Documents\%s\recharge_avail.tif" % data_dir #OKAY (DOUBLE)
+        r_sum_avail_uri = r"C:\Users\rich\Documents\%s\r_sum_avail.tif" % data_dir #SLIGHTLY OFF, BUT MAY BE BECAUSE OF MISALIGNMENT (NODATA VALUES ARE DIFFERENT -1 for recharge -99999 for base)
+        r_sum_avail_pour_uri = r"C:\Users\rich\Documents\%s\r_sum_avail_pour.tif" % data_dir #OFF BY ABSOLUTE VALUES OF HUNDREDS TO THOUSANDS; SEEMS SMALL IN LARGER SCOPE
+        outflow_direction_uri = r"C:\Users\rich\Documents\%s\outflow_direction.tif" % data_dir #SAME
+        outflow_weights_uri = r"C:\Users\rich\Documents\%s\outflow_weights.tif" % data_dir #SAME
+        stream_uri = r"C:\Users\rich\Documents\%s\stream.tif" % data_dir #SAME
+        sf_uri = r"C:\Users\rich\Documents\delete_sf_debug\sf_recharge_%s.tif" % data_dir
+        sf_down_uri = r"C:\Users\rich\Documents\delete_sf_debug\sf_down_%s.tif" % data_dir
+        seasonal_water_yield_core.route_sf(
+            dem_uri_aligned, recharge_avail_uri, r_sum_avail_uri,
+            r_sum_avail_pour_uri, outflow_direction_uri, outflow_weights_uri,
+            stream_uri, sf_uri, sf_down_uri)
+
+
+#    invest_natcap.seasonal_water_yield.seasonal_water_yield.execute(args)
+#    DIRECTORY_BASE = r"C:\Users\rich\Documents\delete_base_sw"
+#    print "Regression testing result"
+#    difference_list =  compare_directories(args['workspace_dir'], DIRECTORY_BASE)
+#    if len(difference_list) > 0:
+#        print "These files don't match: "
+#        pprint.pprint(difference_list)
+#    else:
+#        print "Everything matches!"

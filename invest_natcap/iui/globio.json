@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 700,
+  "height": 750,
   "width": 900,
   "elements": [
     {
@@ -128,16 +128,6 @@
             "type": "GDAL"
           },
           "defaultValue": "../globio/input/sum_yieldgap.tif",
-          "disabledBy": "predefined_globio"
-        },
-        {
-          "id": "high_intensity_agriculture_threshold",
-          "args_id": "high_intensity_agriculture_threshold",
-          "type": "text",
-          "label": "High Intensity Agriculture Threshold",
-          "defaultValue": "1.0",
-          "required": true,
-          "validText": "^[0-9]+\\.?[0-9]*$",
           "disabledBy": "predefined_globio"
         },
         {
