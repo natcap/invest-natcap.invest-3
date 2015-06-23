@@ -182,46 +182,6 @@ def execute(args):
         globio_lulc_uri = args['globio_lulc_uri']
         globio_nodata = pygeoprocessing.get_nodata_from_uri(globio_lulc_uri)
 
-
-    """This is from Justin's old code:
-    #Step 1.2b: Assign high/low according to threshold based on yieldgap.
-    #high_low_intensity_agriculture_uri = args["export_folder"]+"high_low_intensity_agriculture_"+args['run_id']+".tif"
-    high_intensity_agriculture_threshold = 1 #hardcode for now until UI is determined. Eventually this is a user input. Do I bring it into the ARGS dict?
-    high_low_intensity_agriculture = numpy.where(sum_yieldgap < float(args['yieldgap_threshold']*high_intensity_agriculture_threshold), 9.0, 8.0) #45. = average yieldgap on global cells with nonzero yieldgap.
-
-
-    #Step 1.2c: Stamp ag_split classes onto input LULC
-    broad_lulc_ag_split = numpy.where(broad_lulc_array==132.0, high_low_intensity_agriculture, broad_lulc_array)
-
-    #Step 1.3a: Split Scrublands and grasslands into pristine vegetations,
-    #livestock grazing areas, and man-made pastures.
-    three_types_of_scrubland = numpy.zeros(scenario_lulc_array.shape)
-    potential_vegetation_array = geotiff_to_array(aligned_agriculture_uris[0])
-    three_types_of_scrubland = numpy.where((potential_vegetation_array <= 8) & (broad_lulc_ag_split== 131), 6.0, 5.0) # < 8 min potential veg means should have been forest, 131 in broad  is grass, so 1.0 implies man made pasture
-    pasture_array = geotiff_to_array(aligned_agriculture_uris[1])
-    three_types_of_scrubland = numpy.where((three_types_of_scrubland == 5.0) & (pasture_array < args['pasture_threshold']), 1.0, three_types_of_scrubland)
-
-    #Step 1.3b: Stamp ag_split classes onto input LULC
-    broad_lulc_shrub_split = numpy.where(broad_lulc_ag_split==131, three_types_of_scrubland, broad_lulc_ag_split)
-
-    #Step 1.4a: Split Forests into Primary, Secondary, Lightly Used and Plantation.
-    sigma = 9
-    primary_threshold = args['primary_threshold']
-    secondary_threshold = args['secondary_threshold']
-    is_natural = (broad_lulc_shrub_split == 130) | (broad_lulc_shrub_split == 1)
-    blurred = scipy.ndimage.filters.gaussian_filter(is_natural.astype(float), sigma, mode='constant', cval=0.0)
-    ffqi = blurred * is_natural
-
-    four_types_of_forest = numpy.empty(scenario_lulc_array.shape)
-    four_types_of_forest[(ffqi >= primary_threshold)] = 1.0
-    four_types_of_forest[(ffqi < primary_threshold) & (ffqi >= secondary_threshold)] = 3.0
-    four_types_of_forest[(ffqi < secondary_threshold)] = 4.0
-
-    #Step 1.4b: Stamp ag_split classes onto input LULC
-    globio_lulc = numpy.where(broad_lulc_shrub_split == 130 ,four_types_of_forest, broad_lulc_shrub_split) #stamp primary vegetation
-
-    return globio_lulc"""
-
     #load the infrastructure layers from disk
     infrastructure_filenames = []
     infrastructure_nodata_list = []
