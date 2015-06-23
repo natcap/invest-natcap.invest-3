@@ -388,7 +388,7 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
         return np.where(lulc_matrix == lulc_nodata, nodata_out,
                         np.where(lulc_matrix == crop_lucode, cost_scalar, 0.0))
 
-    new_raster_uri = 'cost_per_ha.tif'
+    new_raster_uri = pygeoprocessing.geoprocessing.temporary_filename()
     pygeoprocessing.vectorize_datasets(
         [lulc_raster.uri],
         _calculate_cost,
@@ -401,10 +401,7 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
         datasets_are_pre_aligned=True
     )
 
-    r = Raster.from_file(new_raster_uri, 'GTiff')
-    os.remove(new_raster_uri)
-
-    return r
+    return Raster.from_file(new_raster_uri, 'GTiff')
 
 
 def calc_percentile_yield(vars_dict):
