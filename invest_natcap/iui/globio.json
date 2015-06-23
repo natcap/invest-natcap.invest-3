@@ -34,28 +34,6 @@
           "helpText": "This text will be appended to the end of the output files to help separate multiple runs."
         },
         {
-          "id": "aoi_uri",
-          "args_id": "aoi_uri",
-          "type": "file",
-          "label": "AOI (Shapefile) (optional)",
-          "defaultValue": "",
-          "required": false,
-          "validateAs": {
-            "type": "OGR",
-            "layers": [
-              {
-                "name": {
-                  "inheritFrom": "file"
-                },
-                "type": "polygons",
-                "projection": {
-                  "exists": true
-                }
-              }
-            ]
-          }
-        },
-        {
           "id": "lulc_to_globio_table_uri",
           "args_id": "lulc_to_globio_table_uri",
           "type": "file",
@@ -159,6 +137,57 @@
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
           "disabledBy": "predefined_globio"
+        }
+      ]
+    },
+    {
+      "id": "aoi",
+      "args_id": "aoi",
+      "label": "AOI Summary for GLOBIO",
+      "type": "container",
+      "defaultValue": false,
+      "collapsible": true,
+      "elements": [
+        {
+          "id": "aoi_list",
+          "type": "list",
+          "elements": [
+            {
+              "id": "aoi_uri",
+              "args_id": "aoi_uri",
+              "type": "file",
+              "label": "AOI (Shapefile) (optional)",
+              "defaultValue": "",
+              "required": true,
+              "validateAs": {
+                "type": "OGR",
+                "layers": [
+                  {
+                    "name": {
+                      "inheritFrom": "file"
+                    },
+                    "type": "polygons",
+                    "projection": {
+                      "exists": true
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "aoi_key_field",
+              "args_id": "aoi_key_field",
+              "type": "text",
+              "dataType": "string",
+              "label": "AOI Key Field",
+              "defaultValue": "",
+              "returns": {
+                "ifEmpty": "pass"
+              },
+              "required": true,
+              "helpText": "This is the field in the AOI table that uniquely identifies each feature.  It will be used in aggregation."
+            }
+          ]
         }
       ]
     },

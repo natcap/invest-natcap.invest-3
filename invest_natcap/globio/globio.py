@@ -25,7 +25,12 @@ def execute(args):
     except KeyError:
         file_suffix = ''
 
-    pygeoprocessing.geoprocessing.create_directories([args['workspace_dir']])
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
+
+    pygeoprocessing.geoprocessing.create_directories(
+        [intermediate_dir, output_dir, tmp_dir])
 
     if not args['predefined_globio']:
         out_pixel_size = pygeoprocessing.geoprocessing.get_cell_size_from_uri(
@@ -44,7 +49,7 @@ def execute(args):
              (lulc_code, table) in lulc_to_globio_table.items()])
 
         intermediate_globio_lulc_uri = os.path.join(
-            args['workspace_dir'], 'intermediate_globio_lulc%s.tif' %
+            intermediate_dir, 'intermediate_globio_lulc%s.tif' %
             file_suffix)
         globio_nodata = -1
         pygeoprocessing.geoprocessing.reclassify_dataset_uri(
@@ -52,56 +57,55 @@ def execute(args):
             gdal.GDT_Int32, globio_nodata, exception_flag='values_required')
 
         globio_lulc_uri = os.path.join(
-            args['workspace_dir'], 'globio_lulc%s.tif' % file_suffix)
+            intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
 
         sum_yieldgap_uri = args['sum_yieldgap_uri']
         potential_vegetation_uri = args['potential_vegetation_uri']
         pasture_uri = args['pasture_uri']
 
-        #smoothed natural areas are natural areas run through a gaussian filter
-        natural_areas_uri = os.path.join(
-            args['workspace_dir'], 'natural_areas%s.tif' % file_suffix)
-        natural_areas_nodata = -1
+        #smoothed forest areas are forest areas run through a gaussian filter
+        forest_areas_uri = os.path.join(
+            tmp_dir, 'forest_areas%s.tif' % file_suffix)
+        forest_areas_nodata = -1
 
-        def natural_area_mask_op(lulc_array):
-            """masking out natural areas"""
+        def forest_area_mask_op(lulc_array):
+            """masking out forest areas"""
             nodata_mask = lulc_array == globio_nodata
-            result = (
-                (lulc_array == 130) | (lulc_array == 1))
-            return numpy.where(nodata_mask, natural_areas_nodata, result)
+            result = (lulc_array == 130)
+            return numpy.where(nodata_mask, forest_areas_nodata, result)
 
-        LOGGER.info("create mask of natural areas")
+        LOGGER.info("create mask of forest areas")
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [intermediate_globio_lulc_uri], natural_area_mask_op,
-            natural_areas_uri, gdal.GDT_Int32, natural_areas_nodata,
+            [intermediate_globio_lulc_uri], forest_area_mask_op,
+            forest_areas_uri, gdal.GDT_Int32, forest_areas_nodata,
             out_pixel_size, "intersection", dataset_to_align_index=0,
             assert_datasets_projected=False, vectorize_op=False)
 
-        LOGGER.info('gaussian filter natural areas')
+        LOGGER.info('gaussian filter forest areas')
         sigma = 9.0
         gaussian_kernel_uri = os.path.join(
-            args['workspace_dir'], 'gaussian_kernel%s.tif' % file_suffix)
+            tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
         make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
-        smoothed_natural_areas_uri = os.path.join(
-            args['workspace_dir'], 'smoothed_natural_areas%s.tif' %
+        smoothed_forest_areas_uri = os.path.join(
+            tmp_dir, 'smoothed_forest_areas%s.tif' %
             file_suffix)
         pygeoprocessing.geoprocessing.convolve_2d_uri(
-            natural_areas_uri, gaussian_kernel_uri, smoothed_natural_areas_uri)
+            forest_areas_uri, gaussian_kernel_uri, smoothed_forest_areas_uri)
 
         ffqi_uri = os.path.join(
-            args['workspace_dir'], 'ffqi%s.tif' % file_suffix)
+            intermediate_dir, 'ffqi%s.tif' % file_suffix)
 
-        def ffqi_op(natural_areas_array, smoothed_natural_areas):
+        def ffqi_op(forest_areas_array, smoothed_forest_areas):
             """mask out ffqi only where there's an ffqi"""
             return numpy.where(
-                natural_areas_array != natural_areas_nodata,
-                natural_areas_array * smoothed_natural_areas,
-                natural_areas_nodata)
+                forest_areas_array != forest_areas_nodata,
+                forest_areas_array * smoothed_forest_areas,
+                forest_areas_nodata)
 
         LOGGER.info('calculate ffqi')
         pygeoprocessing.geoprocessing.vectorize_datasets(
-            [natural_areas_uri, smoothed_natural_areas_uri], ffqi_op,
-            ffqi_uri, gdal.GDT_Float32, natural_areas_nodata,
+            [forest_areas_uri, smoothed_forest_areas_uri], ffqi_op,
+            ffqi_uri, gdal.GDT_Float32, forest_areas_nodata,
             out_pixel_size, "intersection", dataset_to_align_index=0,
             assert_datasets_projected=False, vectorize_op=False)
 
@@ -255,7 +259,7 @@ def execute(args):
 
     infrastructure_nodata = -1
     infrastructure_uri = os.path.join(
-        args['workspace_dir'], 'combined_infrastructure%s.tif' % file_suffix)
+        intermediate_dir, 'combined_infrastructure%s.tif' % file_suffix)
 
     def collapse_infrastructure_op(*infrastructure_array_list):
         """Combines all input infrastructure into a single map where if any
@@ -288,7 +292,7 @@ def execute(args):
 
     #calc_msa_f
     primary_veg_mask_uri = os.path.join(
-        args['workspace_dir'], 'primary_veg_mask%s.tif' % file_suffix)
+        tmp_dir, 'primary_veg_mask%s.tif' % file_suffix)
     primary_veg_mask_nodata = -1
 
     def primary_veg_mask_op(lulc_array):
@@ -307,15 +311,16 @@ def execute(args):
     LOGGER.info('gaussian filter primary veg')
     sigma = 9.0
     gaussian_kernel_uri = os.path.join(
-        args['workspace_dir'], 'gaussian_kernel%s.tif' % file_suffix)
+        output_dir, 'gaussian_kernel%s.tif' % file_suffix)
     make_gaussian_kernel_uri(sigma, gaussian_kernel_uri)
     smoothed_primary_veg_mask_uri = os.path.join(
-        args['workspace_dir'], 'smoothed_primary_veg_mask%s.tif' % file_suffix)
+        intermediate_dir, 'smoothed_primary_veg_mask%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.convolve_2d_uri(
-        primary_veg_mask_uri, gaussian_kernel_uri, smoothed_primary_veg_mask_uri)
+        primary_veg_mask_uri, gaussian_kernel_uri,
+        smoothed_primary_veg_mask_uri)
 
     primary_veg_smooth_uri = os.path.join(
-        args['workspace_dir'], 'ffqi%s.tif' % file_suffix)
+        intermediate_dir, 'primary_veg_smooth%s.tif' % file_suffix)
 
     def primary_veg_smooth_op(primary_veg_mask_array, smoothed_primary_veg_mask):
         """mask out ffqi only where there's an ffqi"""
@@ -351,7 +356,7 @@ def execute(args):
         return msa_f
 
     LOGGER.info('calculate msa_f')
-    msa_f_uri = os.path.join(args['workspace_dir'], 'msa_f%s.tif' % file_suffix)
+    msa_f_uri = os.path.join(output_dir, 'msa_f%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [primary_veg_smooth_uri], msa_f_op, msa_f_uri, gdal.GDT_Float32,
         msa_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
@@ -393,10 +398,10 @@ def execute(args):
 
     LOGGER.info('calculate msa_i')
     distance_to_infrastructure_uri = os.path.join(
-        args['workspace_dir'], 'distance_to_infrastructure%s.tif' % file_suffix)
+        intermediate_dir, 'distance_to_infrastructure%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.distance_transform_edt(
         infrastructure_uri, distance_to_infrastructure_uri)
-    msa_i_uri = os.path.join(args['workspace_dir'], 'msa_i%s.tif' % file_suffix)
+    msa_i_uri = os.path.join(output_dir, 'msa_i%s.tif' % file_suffix)
     pygeoprocessing.geoprocessing.vectorize_datasets(
         [globio_lulc_uri, distance_to_infrastructure_uri], msa_i_op, msa_i_uri,
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
@@ -418,7 +423,7 @@ def execute(args):
         10.0: 0.05, #built-up areas
     }
     msa_lu_uri = os.path.join(
-        args['workspace_dir'], 'msa_lu%s.tif' % file_suffix)
+        output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
     pygeoprocessing.geoprocessing.reclassify_dataset_uri(
         globio_lulc_uri, lu_msa_lookup, msa_lu_uri,
@@ -426,7 +431,7 @@ def execute(args):
 
     LOGGER.info('calculate msa')
     msa_uri = os.path.join(
-        args['workspace_dir'], 'msa%s.tif' % file_suffix)
+        output_dir, 'msa%s.tif' % file_suffix)
     def msa_op(msa_f, msa_lu, msa_i):
         return numpy.where(
             msa_f != globio_nodata, msa_f* msa_lu * msa_i, globio_nodata)
@@ -435,9 +440,37 @@ def execute(args):
         gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, assert_datasets_projected=False,
         vectorize_op=False)
-    #calc msa msa = msa_f[tail_type] * msa_lu[tail_type] * msa_i[tail_type]
 
+    #summarize by AOI if it exists
+    if 'aoi_uri' in args:
+        aoi_summary_uri = os.path.join(
+            output_dir, 'aoi_summary%s.shp' %
+            file_suffix)
+        LOGGER.debug('creating new datasource %s', aoi_summary_uri)
+        pygeoprocessing.copy_datasource_uri(args['aoi_uri'], aoi_summary_uri)
 
+        LOGGER.debug('aggregating raster values')
+        #key_dict = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
+        #    msa_uri, args['aoi_uri'], 'OBJECTID', ignore_nodata=True)
+
+        LOGGER.debug('adding msa to shape')
+        #add_column_to_shape(
+        #    aoi_summary_uri, key_dict.pixel_mean, 'msa_mean', 'OBJECTID')
+
+    for filename_to_delete in [smoothed_forest_areas_uri,
+                               smoothed_primary_veg_mask_uri,
+                               forest_areas_uri,
+                               primary_veg_mask_uri,
+                               gaussian_kernel_uri]:
+        try:
+            os.remove(filename_to_delete)
+        except OSError:
+            LOGGER.warn(
+                'attemped to remove %s, but couldn\'t', filename_to_delete)
+    try:
+        os.rmdir(tmp_dir)
+    except OSError:
+        LOGGER.warn('attempted to remove %s but couldn\'t', tmp_dir)
 
 def make_gaussian_kernel_uri(sigma, kernel_uri):
     """create a gaussian kernel raster"""
@@ -476,3 +509,50 @@ def make_gaussian_kernel_uri(sigma, kernel_uri):
             xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
         kernel_row /= integration
         kernel_band.WriteArray(kernel_row, 0, row_index)
+
+def add_column_to_shape(shape_uri, field_dict, field_name, key):
+    """Add a new field to a shapefile with values from a dictionary.
+        The dictionaries keys should match to the values of a unique fields
+        values in the shapefile
+
+        shape_uri - a URI path to a ogr datasource on disk with a unique field
+            'key'. The field 'key' should have values that
+            correspond to the keys of 'field_dict'
+
+        field_dict - a python dictionary with keys mapping to values. These
+            values will be what is filled in for the new field
+
+        field_name - a string for the name of the new field to add
+
+        key - a string for the field name in 'shape_uri' that represents
+            the unique features
+
+        returns - nothing"""
+
+    shape = ogr.Open(shape_uri, 1)
+    layer = shape.GetLayer()
+
+    # Create the new field
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    layer.CreateField(field_defn)
+
+    # Get the number of features (polygons) and iterate through each
+    num_features = layer.GetFeatureCount()
+    for feat_id in xrange(num_features):
+        feat = layer.GetFeature(feat_id)
+
+        # Get the index for the unique field
+        ws_id = feat.GetFieldIndex(key)
+
+        # Get the unique value that will index into the dictionary as a key
+        ws_val = feat.GetField(ws_id)
+
+        # Using the unique value from the field of the feature, index into the
+        # dictionary to get the corresponding value
+        field_val = float(field_dict[ws_val])
+
+        # Get the new fields index and set the new value for the field
+        field_index = feat.GetFieldIndex(field_name)
+        feat.SetField(field_index, field_val)
+
+        layer.SetFeature(feat)
