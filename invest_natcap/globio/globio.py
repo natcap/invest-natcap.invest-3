@@ -16,7 +16,54 @@ LOGGER = logging.getLogger('invest_natcap.globio.globio')
 
 
 def execute(args):
-    """main execute entry point"""
+    """Implementation of the GLOBIO methodology developed by the United Nations
+        Environmental Programme (Alkemade, Rob, Mark van Oorschot, Lera Miles,
+            Christian Nellemann, Michel Bakkenes, and Ben ten Brink. "GLOBIO3:
+            a framework to investigate options for reducing global terrestrial
+            biodiversity loss." Ecosystems 12, no. 3 (2009): 374-390.)
+
+        outputs will exist in args['workspace_dir'] and contain raster outputs
+            of MSA.
+
+        args - a python dictionary with at the following possible entries:
+        args['workspace_dir'] - (string) a uri to the directory that will write
+            output and other temporary files during calculation.
+        args['results_suffix'] - (string) (optional) appended to any output file
+            names
+        args['lulc_to_globio_table_uri'] - (string) path to a CSV table that
+            maps the landcover IDs given by args['lulc_uri'] to the GLOBIO
+            specific landcover ids.
+        args['lulc_uri'] - (string) a path to a raster that
+        args['infrastructure_dir'] - (string) a path to the directory that
+            contains shapefile and raster maps of the presence of
+            infrastructure.  Every GIS file in this directory will be treated
+            as an infrastructure mask that will be combined into one output
+            that's the same resolution as the 'lulc_uri' map.
+        args['pasture_uri'] - (string) file to pasture, used as described in
+            user's guide
+        args['potential_vegetation_uri'] - (string) file to potential veg, as
+            described in user's guide
+        args['sum_yieldgap_uri'] - (string) file to yieldgap sum, as
+            described in user's guide
+        args['pasture_threshold'] - (float) between 0 and 1 indicating threshold
+            for pasture classification.
+        args['intensification_threshold'] - (float) between 0 and 1 indicating
+            threshold for low and intensified.
+        args['primary_threshold'] - (float) between 0 and 1 indicating threshold
+            for primary or secondary forest.
+        args['aoi_uri'] - (string) path to a shapefile that can be used to
+            aggregate final MSA results into features.  If present, an output
+            shapefile, a copy of this one, with a new field "msa_mean" will
+            be added that aggregates the mean MSA value over each region.
+        args['aoi_key_field'] - (string) field in 'aoi_uri' shapefile that
+            uniquely identifies each feature.
+        args['predefined_globio'] - (Boolean) if true overrides calculation
+            of globio landcover map and uses args['globio_lulc_uri'] raster
+            directly.
+        args['globio_lulc_uri'] - (string) exists if args['predefined_globio']
+            is true and is uses as the globio map.
+
+    """
 
     #append a _ to the suffix if it's not empty and doens't already have one
     try:
