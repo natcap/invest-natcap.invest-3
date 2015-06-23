@@ -4,6 +4,7 @@ import os
 import logging
 
 import gdal
+import ogr
 import osr
 import numpy
 import pygeoprocessing
@@ -450,12 +451,12 @@ def execute(args):
         pygeoprocessing.copy_datasource_uri(args['aoi_uri'], aoi_summary_uri)
 
         LOGGER.debug('aggregating raster values')
-        #key_dict = pygeoprocessing.geoprocessing.aggregate_raster_values_uri(
-        #    msa_uri, args['aoi_uri'], 'OBJECTID', ignore_nodata=True)
+        key_dict = pygeoprocessing.aggregate_raster_values_uri(
+            msa_uri, args['aoi_uri'], 'OBJECTID')
 
         LOGGER.debug('adding msa to shape')
-        #add_column_to_shape(
-        #    aoi_summary_uri, key_dict.pixel_mean, 'msa_mean', 'OBJECTID')
+        add_column_to_shape(
+            aoi_summary_uri, key_dict.pixel_mean, 'msa_mean', 'OBJECTID')
 
     for filename_to_delete in [smoothed_forest_areas_uri,
                                smoothed_primary_veg_mask_uri,
