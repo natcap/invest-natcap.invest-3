@@ -189,8 +189,9 @@ class TestCalculateCostOfPerHectareInputs(unittest.TestCase):
             'cost_machine_per_ha'] + econ_table[
             'cost_seed_per_ha'] + econ_table['cost_irrigation_per_ha']
 
-        assert(float(CostPerHectareInputTotal_raster.get_band(
-                1)[0, 0]) == check)
+        # this is a floating-point value, so using AlmostEqual assertion.
+        self.assertAlmostEqual(CostPerHectareInputTotal_raster.get_band(1)[0,0],
+             check)
 
 
 class TestCalcCropReturns(unittest.TestCase):
@@ -227,8 +228,10 @@ class TestCalcCropReturns(unittest.TestCase):
         revenue = econ_table['price_per_tonne'] * 2.0
         check_returns = revenue - cost
 
-        assert(returns_raster.get_band(
-                1)[0, 0] == np.float32(check_returns))
+        pixel_value = returns_raster.get_band(1)[0,0]
+        #assert(returns_raster.get_band(
+        #        1)[0, 0] == np.float32(check_returns))
+        assert pixel_value == np.float32(check_returns), "%s != %s" % (pixel_value, check_returns)
 
 
 class TestCalcNutrition(unittest.TestCase):
