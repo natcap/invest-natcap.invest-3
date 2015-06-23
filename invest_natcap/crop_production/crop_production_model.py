@@ -401,7 +401,10 @@ def _calc_cost_of_per_hectare_inputs(vars_dict, crop, lulc_raster):
         datasets_are_pre_aligned=True
     )
 
-    return Raster.from_file(new_raster_uri, 'GTiff')
+    r = Raster.from_file(new_raster_uri, 'GTiff')
+    os.remove(new_raster_uri)
+
+    return r
 
 
 def calc_percentile_yield(vars_dict):
