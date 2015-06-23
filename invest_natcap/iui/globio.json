@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 750,
+  "height": 800,
   "width": 900,
   "elements": [
     {
@@ -123,7 +123,7 @@
           "args_id": "intensification_threshold",
           "type": "text",
           "label": "Intensification Threshold",
-          "defaultValue": "0.456804906897",
+          "defaultValue": "0.46",
           "required": true,
           "validText": "^[0-9]+\\.?[0-9]*$",
           "disabledBy": "predefined_globio"
@@ -156,7 +156,7 @@
               "id": "aoi_uri",
               "args_id": "aoi_uri",
               "type": "file",
-              "label": "AOI (Shapefile) (optional)",
+              "label": "AOI (Shapefile)",
               "defaultValue": "",
               "required": true,
               "validateAs": {
@@ -166,10 +166,7 @@
                     "name": {
                       "inheritFrom": "file"
                     },
-                    "type": "polygons",
-                    "projection": {
-                      "exists": true
-                    }
+                    "type": "polygons"
                   }
                 ]
               }
