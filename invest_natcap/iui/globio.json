@@ -4,7 +4,7 @@
   "targetScript": "invest_natcap.globio.globio",
   "modelName": "globio",
   "localDocURI": "../documentation/globio.html",
-  "height": 700,
+  "height": 750,
   "width": 900,
   "elements": [
     {
@@ -67,7 +67,19 @@
             "fieldsExist": ["lucode", "globio_lucode"]
           },
           "helpText": "A CSV table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', and 'usle_p'.  See the InVEST Sediment User's Guide for more information about these fields.",
-          "defaultValue": "../globio/input/lulc_conversion_table.csv",
+          "disabledBy": "predefined_globio"
+        },
+        {
+          "id": "msa_lookup_table_uri",
+          "args_id": "msa_lookup_table_uri",
+          "type": "file",
+          "label": "MSA Threshold Values (CSV)",
+          "defaultValue": "../globio/input/msa_lookup_table.csv",
+          "required": true,
+          "validateAs": {
+            "type": "CSV"
+          },
+          "helpText": "A CSV table containing lookup threshold values for MSA classifications. Default is provided but could be changed by user.",
           "disabledBy": "predefined_globio"
         },
         {
